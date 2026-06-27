@@ -16,23 +16,30 @@ export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSes
     const [showDarkbackground, setshowDarkbackground] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [isSaving, setIsSaving] = useState(false)
-    const hasSavedSession = useRef(false)
+    const savePromiseRef = useRef<Promise<void> | null>(null)
     const hasPerformanceFlow = musclesForPerformance.length > 0
 
     async function saveSessionOnce() {
-        if (hasSavedSession.current) return
-        hasSavedSession.current = true
-        setIsSaving(true)
-        try {
-            await onSaveSession()
-            setSaveError("")
-        } catch (error) {
-            hasSavedSession.current = false
-            setSaveError("Failed to save session. Please try again.")
-            throw error
-        } finally {
-            setIsSaving(false)
+        if (savePromiseRef.current) {
+            return savePromiseRef.current
         }
+
+        const promise = (async () => {
+            setIsSaving(true)
+            try {
+                await onSaveSession()
+                setSaveError("")
+            } catch (error) {
+                savePromiseRef.current = null
+                setSaveError("Failed to save session. Please try again.")
+                throw error
+            } finally {
+                setIsSaving(false)
+            }
+        })()
+
+        savePromiseRef.current = promise
+        return promise
     }
 
     async function handlePerformanceConfirm() {
@@ -95,7 +102,7 @@ export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSes
                                         <p className="text-red-400 text-xs font-spaceMono">{saveError}</p>
                                         <button
                                             onClick={() => {
-                                                hasSavedSession.current = false
+                                                savePromiseRef.current = null
                                                 saveSessionOnce()
                                                     .then(() => setshowDarkbackground(true))
                                                     .catch(() => {})

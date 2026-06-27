@@ -17,8 +17,6 @@ type set = {
 const muscle= ["back","chest","legs", "biceps","triceps","hamstrings","abs","front delts","side delts","rear delts","glutes","calves"]
 
 export default function Sessionpage(){
-
-    console.log("You are inside the session page")
     const {sessionId}= useParams()
     const location = useLocation()
     const navigate = useNavigate()
