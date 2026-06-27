@@ -13,33 +13,58 @@ export default function LandingPage(){
     return (
         <>
         {
-            token ? <Navigate to="/Allmesocycle" /> : <div className="bg-black min-h-screen w-full p-4 flex items-center justify-center">
-                <div className=" max-w-6xl px-6 flex flex-col">
-                    <div className="flex gap-5 items-center justify-between flex-wrap mb-10">
-                        <div >
+            token ? <Navigate to="/Allmesocycle" /> : 
+            <div style={{ backgroundColor: "#111111" }} className="min-h-screen w-full">
+                <div style={{ borderBottom: "1px solid #2A2A2A" }} className="w-full px-8 py-4 flex items-center justify-between">
+                    <span className="font-bebas text-2xl tracking-widest" style={{ color: "#F5F5F5" }}>HYPERTROPHY</span>
+                    <div className="flex gap-3">
+                        <a href="/login">
+                            <button className="font-dmSans text-sm px-4 py-2 rounded-lg transition-all duration-200"
+                                style={{ color: "#888888", border: "1px solid #2A2A2A", background: "transparent" }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "#F5F5F5")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "#888888")}>
+                                Log in
+                            </button>
+                        </a>
+                        <a href="/signup">
+                            <button className="font-dmSans text-sm px-4 py-2 rounded-lg transition-all duration-200"
+                                style={{ color: "#111111", background: "#F5F5F5" }}
+                                onMouseEnter={e => (e.currentTarget.style.background = "#D0D0D0")}
+                                onMouseLeave={e => (e.currentTarget.style.background = "#F5F5F5")}>
+                                Get started
+                            </button>
+                        </a>
+                    </div>
+                </div>
+
+                <div className="max-w-6xl mx-auto px-6 flex flex-col">
+                    <div className="flex gap-10 items-center justify-between flex-wrap py-20">
+                        <div className="flex-shrink-0">
                             <HeroText />
                             <HeroButton />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-[300px]">
                             <ChartCard />
                         </div>
                     </div>
 
-                    <div className="mt-25" id="feedback">
+                    <div style={{ borderTop: "1px solid #2A2A2A" }} className="w-full" />
+
+                    <div className="mt-20" id="feedback">
                         <Feedback />
                     </div>
 
-                    <div className="mt-25">
+                    <div style={{ borderTop: "1px solid #2A2A2A" }} className="w-full mt-20" />
+
+                    <div className="mt-20">
                         <WhyAdaptiveVolume/>
                     </div>
                     
                     <Footer/>
-                    
                 </div>
             </div>
-                }
+        }
         </>
-        
     
 );
 }

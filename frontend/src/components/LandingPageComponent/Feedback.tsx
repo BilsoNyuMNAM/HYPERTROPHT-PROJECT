@@ -1,47 +1,59 @@
-
-
-
 export default function Feedback(){
-     return(
-        <div className="text-white font-barlow " >
-            <div> {/*the outer div*/}
-                <div>   
-                    <h2 className="text-2xl font-bold font-spaceMono">
-                        Feedback regulates volume
-                    </h2>
-                    <p className="text-sm mt-2 font-spaceMono text-gray-400">
-                        A three-step loop that continually adaps your training load <br></br>based on how your body actually responds
-                    </p>
-                </div>
-                <div className="flex flex-wrap">
-                    <div className="border-2  rounded-lg border-[#1D1F22] flex gap-3 p-4 flex-col bg-[#141414] ">
-                        <div className="flex items-center justify-center text-[#D94929]">01</div>
-                        <div className="flex items-center justify-center "><h2>Log Feedback</h2></div>
-                        <div className="text-gray-400"><p>Rate soreness, performance, and readiness<br></br>after each session.Takes under 20 seconds</p></div>
-                    </div>
+    const steps = [
+        {
+            num: "01",
+            title: "Log Feedback",
+            desc: "Rate soreness, performance, and readiness after each session. Takes under 20 seconds.",
+        },
+        {
+            num: "02",
+            title: "Model Adjusts Volume",
+            desc: "Our algorithm weighs your feedback against training history to recalculate optimal sets per muscle.",
+        },
+        {
+            num: "03",
+            title: "Next Volume Adapts",
+            desc: "Your updated plan is ready — more volume when you're thriving, less when you're not.",
+        },
+    ]
 
-                    <div className="flex items-center text-[#D94929] px-2">
-                        →
-                    </div>
+    return(
+        <div>
+            <p className="font-spaceMono text-xs mb-3" style={{ color: "#4CAF7D" }}>HOW IT WORKS</p>
+            <h2 className="text-3xl font-bold font-spaceMono mb-2" style={{ color: "#F5F5F5" }}>
+                Feedback regulates volume
+            </h2>
+            <p className="text-sm font-spaceMono mb-10" style={{ color: "#888888" }}>
+                A three-step loop that continually adapts your training load<br/>
+                based on how your body actually responds
+            </p>
 
-                    <div className="border-2  rounded-lg border-[#1D1F22] p-4 flex gap-3 flex-col bg-[#141414]">
-                        <div className="flex items-center justify-center text-[#D94929]">02</div>
-                        <div className="flex items-center justify-center font-bold"><h2>Model Adjusts Volume</h2></div>
-                        <div className="text-gray-400"><p>Our algorithm weighs your feedback agaist <br></br>training history to recalculate optiomal sets per<br></br>muscle</p></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {steps.map((step, i) => (
+                    <div key={i}>
+                        <div
+                            className="rounded-xl p-6 h-full flex flex-col gap-4 transition-all duration-200"
+                            style={{ background: "#1A1A1A", border: "1px solid #2A2A2A" }}
+                        >
+                            <span className="font-bebas text-4xl" style={{ color: "#2A2A2A" }}>
+                                {step.num}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ background: "#4CAF7D" }} />
+                                <h3 className="font-dmSans font-semibold text-base" style={{ color: "#F5F5F5" }}>
+                                    {step.title}
+                                </h3>
+                            </div>
+                            <p className="font-spaceMono text-xs leading-relaxed" style={{ color: "#888888" }}>
+                                {step.desc}
+                            </p>
+                        </div>
+                        {i < steps.length - 1 && (
+                            <div className="hidden md:flex absolute" />
+                        )}
                     </div>
-
-                    <div className="flex items-center text-[#D94929] px-2">
-                        →
-                    </div>
-
-
-                    <div className="border-2  rounded-lg border-[#1D1F22] flex gap-3 flex-col p-4 bg-[#141414]">
-                       <div className="flex items-center justify-center text-[#D94929]">03</div>
-                        <div className="flex items-center justify-center font-bold"><h2>Next Volume Adapts</h2></div>
-                        <div className="text-gray-400"><p >Your updated plan is ready -- more volume <br></br>when you're thriving, less when you're not </p></div>
-                    </div>
-                </div>
+                ))}
             </div>
         </div>
-     )
+    )
 }
