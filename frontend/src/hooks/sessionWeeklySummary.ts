@@ -13,7 +13,10 @@ export type SessionWeeklySetSummaryRow = {
   completedSetsOutsideSession: number;
   currentSessionSets: number;
   completedSets: number;
+  /** Can be negative when the muscle is over its weekly target. */
   setsLeft: number;
+  /** False when the muscle has no programmed weekly target (no limit applies). */
+  hasTarget: boolean;
 };
 
 function normalizeMuscleName(muscleName: string): string {
@@ -53,19 +56,21 @@ export function buildSessionWeeklySetSummary(
 
   return muscleOrder.map((muscleKey) => {
     const seedRow = summarySeedByMuscle.get(muscleKey);
-    const targetSets = seedRow?.targetSets || 0;
-    const completedSetsOutsideSession =
-      seedRow?.completedSetsOutsideSession || 0;
-    const currentSessionSets = currentSessionSetsByMuscle.get(muscleKey) || 0;
+    const hasTarget = seedRow !== undefined;
+    const targetSets = seedRow?.targetSets ?? 0;
+    const completedSetsOutsideSession = seedRow?.completedSetsOutsideSession ?? 0;
+    const currentSessionSets = currentSessionSetsByMuscle.get(muscleKey) ?? 0;
     const completedSets = completedSetsOutsideSession + currentSessionSets;
 
     return {
-      muscleName:draftMuscleLabels.get(muscleKey) || seedRow?.muscleName || muscleKey,
+      muscleName: draftMuscleLabels.get(muscleKey) || seedRow?.muscleName || muscleKey,
       targetSets,
       completedSetsOutsideSession,
       currentSessionSets,
       completedSets,
-      setsLeft: Math.max(targetSets - completedSets, 0),
+      // Negative values mean the muscle is over its weekly target.
+      setsLeft: targetSets - completedSets,
+      hasTarget,
     };
   });
 }

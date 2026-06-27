@@ -39,12 +39,45 @@ export default function Sessionpage(){
         return null
     }
     
-    const {isLoading, Addexercise,MUSCLE_COLORS,  addexercise, persistableExercises, Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, submitSession, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData, weeklySetSummary} = useSession({sessionId, weekId, mesoId})
+    const {isLoading, Addexercise,MUSCLE_COLORS,  addexercise, persistableExercises, Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, submitSession, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData, weeklySetSummary, weeklySetSummarySeed} = useSession({sessionId, weekId, mesoId})
     
-    function calculateSetsLeftForMuscle(muscletrained: string): number |null {
-        const muscleSummary = weeklySetSummary.find(muscle => muscle.muscleName === muscletrained);
-        const setsLeftForMuscle = muscleSummary ? muscleSummary.setsLeft : null;
-        return setsLeftForMuscle;
+    function calculateSetsLeftForMuscle(muscletrained: string): number | null {
+        const muscleSummary = weeklySetSummary.find(row => row.muscleName === muscletrained)
+        if (!muscleSummary || !muscleSummary.hasTarget) return null
+        return muscleSummary.setsLeft
+    }
+
+    /**
+     * Returns the number of sets still available for a given muscle this week,
+     * accounting for all other sessions and all other exercises in this session.
+     * Returns null when the muscle has no programmed weekly target.
+     *
+     * Used by Exercisecomponent to validate a muscle selection BEFORE the
+     * current exercise's sets are counted towards that muscle.
+     */
+    function getMuscleSetsLeft(muscleName: string): number | null {
+        const normalizedName = muscleName.trim().toLowerCase()
+
+        // Case 1: muscle is already tracked in the session draft (via another exercise).
+        // Its setsLeft does NOT include the current exercise because that exercise
+        // has either no muscle or a different muscle assigned.
+        const summaryRow = weeklySetSummary.find(
+            row => row.muscleName.trim().toLowerCase() === normalizedName
+        )
+        if (summaryRow) {
+            return summaryRow.hasTarget ? summaryRow.setsLeft : null
+        }
+
+        // Case 2: muscle exists in the weekly seed but isn't trained yet this session.
+        const seedRow = weeklySetSummarySeed.find(
+            row => row.muscleName.trim().toLowerCase() === normalizedName
+        )
+        if (seedRow) {
+            return seedRow.targetSets - seedRow.completedSetsOutsideSession
+        }
+
+        // Case 3: no weekly target programmed for this muscle.
+        return null
     }
     
   
@@ -112,22 +145,38 @@ export default function Sessionpage(){
 
                                 <div className="space-y-3">
                                     {weeklySetSummary.map((summary) => {
+                                        const isOverTarget = summary.hasTarget && summary.setsLeft < 0
                                         return (
                                             <div
                                                 key={summary.muscleName}
-                                                className="rounded-[10px] border border-[#191919] bg-black/40 px-4 py-3"
+                                                className={`rounded-[10px] border px-4 py-3 ${
+                                                    isOverTarget
+                                                        ? 'border-orange-500/30 bg-orange-500/5'
+                                                        : 'border-[#191919] bg-black/40'
+                                                }`}
                                             >
                                                 <div className="flex items-center justify-between gap-4">
                                                     <span className="font-spaceMono text-sm uppercase">
                                                         {summary.muscleName}
                                                     </span>
-                                                    <span className="font-spaceMono text-sm text-[#c8ff00] uppercase">
-                                                        {summary.setsLeft} left
-                                                    </span>
+                                                    {summary.hasTarget ? (
+                                                        <span className={`font-spaceMono text-sm uppercase ${
+                                                            isOverTarget ? 'text-orange-400' : 'text-[#c8ff00]'
+                                                        }`}>
+                                                            {isOverTarget
+                                                                ? `${Math.abs(summary.setsLeft)} over`
+                                                                : `${summary.setsLeft} left`
+                                                            }
+                                                        </span>
+                                                    ) : (
+                                                        <span className="font-spaceMono text-sm text-[#555] uppercase">no limit</span>
+                                                    )}
                                                 </div>
-                                                <p className="mt-2 font-spaceMono text-[10px] tracking-[0.08em] text-[#7b7b7b] uppercase">
-                                                    {summary.completedSets}/{summary.targetSets} weekly sets counted
-                                                </p>
+                                                {summary.hasTarget && (
+                                                    <p className="mt-2 font-spaceMono text-[10px] tracking-[0.08em] text-[#7b7b7b] uppercase">
+                                                        {summary.completedSets}/{summary.targetSets} weekly sets counted
+                                                    </p>
+                                                )}
                                                 <p className="mt-1 font-spaceMono text-[10px] text-[#555] uppercase tracking-[0.08em]">
                                                     Current session: {summary.currentSessionSets} sets
                                                 </p>
@@ -141,7 +190,7 @@ export default function Sessionpage(){
                         {
                             addexercise.length === 0? <p>Start adding exercise</p>:addexercise.map((exercise)=>{
                                 //@ts-ignore
-                                return <Exercisecomponent key={exercise.id} setsLeft={calculateSetsLeftForMuscle(exercise.muscletrained)} logSoreness={logSoreness} muscletrained={exercise.muscletrained} MUSCLE_COLORS={MUSCLE_COLORS} muscle={muscle} currentDropdown={currentDropdown} setCurrentDropdown={setCurrentDropdown} isOpen={isOpen} setOpen={setOpen} exercise_name={exercise.exercise_name} id={exercise.id} exerciseName={exerciseName} addset={addSet} deleteSet={deleteSet} deleteExercise={deleteExercise} set={exercise.set} addsetData={addsetData} Selecttrainedmuscle={Selecttrainedmuscle} apiCall={apiCall} setApiCall={setApiCall} weekId={weekId} mesoId={mesoId} existingSoreness={exercise.soreness}/>
+                                 return <Exercisecomponent key={exercise.id} setsLeft={calculateSetsLeftForMuscle(exercise.muscletrained)} logSoreness={logSoreness} muscletrained={exercise.muscletrained} MUSCLE_COLORS={MUSCLE_COLORS} muscle={muscle} currentDropdown={currentDropdown} setCurrentDropdown={setCurrentDropdown} isOpen={isOpen} setOpen={setOpen} exercise_name={exercise.exercise_name} id={exercise.id} exerciseName={exerciseName} addset={addSet} deleteSet={deleteSet} deleteExercise={deleteExercise} set={exercise.set} addsetData={addsetData} Selecttrainedmuscle={Selecttrainedmuscle} apiCall={apiCall} setApiCall={setApiCall} weekId={weekId} mesoId={mesoId} existingSoreness={exercise.soreness} getMuscleSetsLeft={getMuscleSetsLeft}/>
                             })
                         }
                         

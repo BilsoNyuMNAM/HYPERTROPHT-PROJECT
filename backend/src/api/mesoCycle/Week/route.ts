@@ -74,10 +74,10 @@ weekProgressionRoute.post("/calculate-next/:weekId", authMiddleware, async (c) =
       );
     }
 
+    console.error("[calculateNextWeek] Unexpected error:", knownError);
     return c.json(
       {
         message: "Failed to calculate next week volume",
-        error: knownError.message,
       },
       500
     );
@@ -138,10 +138,10 @@ weekProgressionRoute.post("/reset-from/:weekId", authMiddleware, async (c) => {
       );
     }
 
+    console.error("[resetFromWeek] Unexpected error:", knownError);
     return c.json(
       {
         message: "Failed to reset mesocycle from selected week",
-        error: knownError.message,
       },
       500
     );

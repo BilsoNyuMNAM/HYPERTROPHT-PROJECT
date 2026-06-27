@@ -237,7 +237,7 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
         addexercise
     )
 
-    return {isLoading, MUSCLE_COLORS, Addexercise,submitSession,  Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, addexercise, persistableExercises, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData:getSessionname, weeklySetSummary}
+    return {isLoading, MUSCLE_COLORS, Addexercise,submitSession,  Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, addexercise, persistableExercises, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData:getSessionname, weeklySetSummary, weeklySetSummarySeed}
     
 
 }

@@ -194,7 +194,6 @@ cycle.delete("/:id", authMiddleware, async (c) => {
         return c.json(
             {
                 message: "Failed to soft delete mesocycle",
-                error: knownError.message,
             },
             500
         )

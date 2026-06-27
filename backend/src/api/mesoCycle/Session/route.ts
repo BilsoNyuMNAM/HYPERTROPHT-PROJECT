@@ -174,10 +174,10 @@ sessionRoute.patch("/booleanUpdate/:weekId", authMiddleware, async (c) => {
         404
       );
     }
+    console.error("[booleanUpdate] Unexpected error:", knownError);
     return c.json(
       {
         message: "Failed to update week status",
-        error: knownError.message,
       },
       500
     );
@@ -242,10 +242,10 @@ sessionRoute.delete("/:sessionId", authMiddleware, async (c) => {
       );
     }
 
+    console.error("[deleteSession] Unexpected error:", knownError);
     return c.json(
       {
         message: "Failed to delete session",
-        error: knownError.message,
       },
       500
     );
