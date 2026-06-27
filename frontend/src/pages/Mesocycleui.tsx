@@ -1,25 +1,16 @@
 import { useNavigate, useParams } from "react-router-dom"
-import { useEffect, useState } from "react"
+import {useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import VolumeOverview from "../components/Volumeoverview"
 import { Get, Post } from "../service/centralisedApi.js"
 import { Spinner } from "../components/ui/spinner"
 
-type WeekData = {
-    id: number
-    week_name: string
-    mesocycleId: number
-    unlocked: boolean
-    startingVolumeCount: number
-}
-
-export default function Mesocycleui(){
-    const {id} = useParams()
+export default function Mesocycleui() {
+    const { id } = useParams()
     const navigate = useNavigate()
-    const{data,isLoading} = useQuery({
-        queryKey:['mesoCycledata', id], //the cache box  //react use it to cache and find data later //imagine id as differnt slot in a boz
-        //['mesoCycledata', id] means — "cache this data under the name mesoCycledata, but separately for each unique id"
-        queryFn: async function(){
+    const { data, isLoading } = useQuery({
+        queryKey: ['mesoCycledata', id],
+        queryFn: async function () {
             const result = await Get(`/mesoCycle/${id}`)
             if (!result.ok) {
                 throw new Error(`Failed to fetch mesocycle: ${result.status}`)
@@ -27,8 +18,8 @@ export default function Mesocycleui(){
             return await result.json();
         }
     })
-    
-  
+
+
     const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null)
     const [selectedWeekNumber, setSelectedWeekNumber] = useState<number | null>(null)
     const [selectedWeekIsFinal, setSelectedWeekIsFinal] = useState(false)
@@ -62,7 +53,7 @@ export default function Mesocycleui(){
             }
 
             setCalculateMessage("Next week volume calculated and unlocked successfully.")
-            
+
         } catch (error) {
             setCalculateMessage("Failed to calculate next week volume.")
         } finally {
@@ -89,133 +80,289 @@ export default function Mesocycleui(){
             }
 
             setCalculateMessage("Reset complete. Selected week and following weeks are now locked.")
-            
+
         } catch (error) {
             setCalculateMessage("Failed to reset from selected week.")
         } finally {
             setIsResetting(false)
         }
     }
-    
-    
 
     return (
         <>
-        {
-            isLoading? (
-                <div className="w-full min-h-screen bg-black text-white flex items-center justify-center">
-                    <Spinner className="w-8 h-8 text-[#c8ff00]" />
-                </div>
-            ) : (
-                <div className="w-full min-h-screen bg-black text-white overflow-y-auto" style={{ fontFamily: "'Barlow', sans-serif" }}>
-                <div className="w-full max-w-5xl mx-auto">
+            {
+                isLoading ? (
+                    <div className="w-full min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0f0f0f" }}>
+                        <Spinner className="w-8 h-8 text-white" />
+                    </div>
+                ) : (
+                    <div
+                        className="w-full min-h-screen overflow-y-auto"
+                        style={{
+                            backgroundColor: "#0f0f0f",
+                            color: "#ffffff",
+                            fontFamily: "'Inter', 'Geist', system-ui, sans-serif",
+                        }}
+                    >
+                        <div className="w-full max-w-4xl mx-auto">
+                            <nav
+                                className="flex items-center px-10 py-6"
+                                style={{ borderBottom: "1px solid #1e1e1e" }}
+                            >
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-1.5 transition-colors"
+                                    style={{
+                                        fontSize: "12px",
+                                        letterSpacing: "0.05em",
+                                        color: "#6b7280",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.color = "#a1a1aa")}
+                                    onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                        <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Mesocycles
+                                </button>
+                            </nav>
+                            <div className="px-10 pt-10 pb-8">
+                                <p
+                                    style={{
+                                        fontSize: "11px",
+                                        letterSpacing: "0.12em",
+                                        color: "#6b7280",
+                                        textTransform: "uppercase",
+                                        marginBottom: "8px",
+                                    }}
+                                >
+                                    Mesocycle
+                                </p>
+                                <h1
+                                    style={{
+                                        fontSize: "clamp(2.4rem, 6vw, 3.5rem)",
+                                        fontWeight: 700,
+                                        lineHeight: 1.1,
+                                        color: "#ffffff",
+                                        letterSpacing: "-0.02em",
+                                        marginBottom: "32px",
+                                    }}
+                                >
+                                    {data?.result.name.name || "Mesocycle Name"}
+                                </h1>
 
-                    <nav className="flex items-center justify-between px-12 py-7 border-b border-white/10">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="flex items-center gap-2 text-xs tracking-widest text-gray-600 hover:text-gray-300 transition-colors"
-                            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                            MESOCYCLES
-                        </button>
-                        
-                    </nav>
+                               
+                                <div className="flex gap-4">
+                                   
+                                    <div
+                                        style={{
+                                            backgroundColor: "#1a1a1a",
+                                            border: "1px solid #2a2a2a",
+                                            borderRadius: "12px",
+                                            padding: "20px 24px",
+                                            minWidth: "140px",
+                                        }}
+                                    >
+                                        <p
+                                            style={{
+                                                fontSize: "11px",
+                                                letterSpacing: "0.1em",
+                                                textTransform: "uppercase",
+                                                color: "#6b7280",
+                                                marginBottom: "8px",
+                                            }}
+                                        >
+                                            Sessions
+                                        </p>
+                                        <div
+                                            style={{
+                                                fontSize: "2.5rem",
+                                                fontWeight: 700,
+                                                color: "#ffffff",
+                                                lineHeight: 1,
+                                                marginBottom: "8px",
+                                            }}
+                                        >
+                                            {data?.result.totalsession || 0}
+                                        </div>
+                                        <div
+                                            className="flex items-center gap-1"
+                                            style={{ fontSize: "11px", color: "#6b7280" }}
+                                        >
+                                            <span
+                                                style={{
+                                                    display: "inline-block",
+                                                    width: "6px",
+                                                    height: "6px",
+                                                    borderRadius: "50%",
+                                                    backgroundColor: "#6b7280",
+                                                    marginRight: "4px",
+                                                }}
+                                            />
+                                            
+                                        </div>
+                                    </div>
 
-                
-                    <div className="px-12 pt-12">
-                        <div className="text-xs tracking-widest text-gray-600 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            MESOCYCLE
-                        </div>
-                        <div className="font-bebas text-7xl leading-none text-white uppercase tracking-tight">
-                            {data?.result.name.name || "Mesocycle Name"}
-                        </div>
-
-                        
-                        <div className="flex items-center gap-8 mt-7">
-                            {/* <div className="flex flex-col gap-1">
-                                <span className="font-bebas text-4xl leading-none" style={{ color: '#c8ff00' }}>0</span>
-                                <span className="text-xs tracking-widest text-gray-600" style={{ fontFamily: "'JetBrains Mono', monospace" }}>SESSIONS</span>
-                            </div> */}
-                            <div className="w-px h-9 bg-white/10" />
-                            <div className="flex flex-col gap-1">
-                                <div className="font-extrabold text-5xl text-[#c8ff00]">
-                                    {data?.result.totalsession || 0}
+                                    
+                                    <div
+                                        style={{
+                                            backgroundColor: "#1a1a1a",
+                                            border: "1px solid #2a2a2a",
+                                            borderRadius: "12px",
+                                            padding: "20px 24px",
+                                            minWidth: "140px",
+                                        }}
+                                    >
+                                        <p
+                                            style={{
+                                                fontSize: "11px",
+                                                letterSpacing: "0.1em",
+                                                textTransform: "uppercase",
+                                                color: "#6b7280",
+                                                marginBottom: "8px",
+                                            }}
+                                        >
+                                            Weeks
+                                        </p>
+                                        <div
+                                            style={{
+                                                fontSize: "2.5rem",
+                                                fontWeight: 700,
+                                                color: "#ffffff",
+                                                lineHeight: 1,
+                                                marginBottom: "8px",
+                                            }}
+                                        >
+                                            {data?.result.weekname?.length == 0 ? "0" : data?.result.weekname?.length}
+                                        </div>
+                                        <div
+                                            className="flex items-center gap-1"
+                                            style={{ fontSize: "11px", color: "#6b7280" }}
+                                        >
+                                            Total Planned
+                                        </div>
+                                    </div>
                                 </div>
-                                <span className="text-xs tracking-widest text-gray-600" style={{ fontFamily: "'JetBrains Mono', monospace" }}> SESSIONS</span>
                             </div>
 
-                            <div className="w-px h-9 bg-white/10" />
-                            <div className="flex flex-col gap-1">
-                                <div className="font-extrabold text-5xl text-white">
-                                    {data?.result.weekname?.length == 0 ? "0" : data?.result.weekname?.length}
+                            <div style={{ height: "1px", backgroundColor: "#1e1e1e", margin: "0 40px" }} />
+                            <div className="px-10 py-8" style={{ paddingBottom: "64px" }}>
+                                <div className="flex flex-wrap items-center gap-3 mb-6">
+                                    <button
+                                        type="button"
+                                        onClick={handleCalculateNextWeek}
+                                        disabled={selectedWeekIsFinal || isCalculating || !selectedWeekId}
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            backgroundColor: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "#2a2a2a" : "#ffffff",
+                                            color: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "#6b7280" : "#000000",
+                                            border: "none",
+                                            borderRadius: "8px",
+                                            padding: "10px 18px",
+                                            fontSize: "12px",
+                                            fontWeight: 500,
+                                            letterSpacing: "0.04em",
+                                            cursor: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "not-allowed" : "pointer",
+                                            transition: "opacity 0.15s",
+                                            opacity: selectedWeekIsFinal || isCalculating || !selectedWeekId ? 0.45 : 1,
+                                            height: "40px",
+                                            fontFamily: "inherit",
+                                        }}
+                                    >
+                                        {selectedWeekIsFinal
+                                            ? "Mesocycle Complete"
+                                            : isCalculating
+                                                ? "Calculating..."
+                                                : "Calculate Volume for Next Week"}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleResetFromSelectedWeek}
+                                        disabled={isResetting || !selectedWeekId || selectedWeekNumber === 1}
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            backgroundColor: "#1a1a1a",
+                                            color: isResetting || !selectedWeekId || selectedWeekNumber === 1 ? "#6b7280" : "#ffffff",
+                                            border: "1px solid #2a2a2a",
+                                            borderRadius: "8px",
+                                            padding: "10px 18px",
+                                            fontSize: "12px",
+                                            fontWeight: 500,
+                                            letterSpacing: "0.04em",
+                                            cursor: isResetting || !selectedWeekId || selectedWeekNumber === 1 ? "not-allowed" : "pointer",
+                                            transition: "opacity 0.15s",
+                                            opacity: isResetting || !selectedWeekId || selectedWeekNumber === 1 ? 0.45 : 1,
+                                            height: "40px",
+                                            fontFamily: "inherit",
+                                        }}
+                                    >
+                                        {isResetting ? "Resetting..." : "Reset from Selected Week"}
+                                    </button>
                                 </div>
-                                <span className="text-xs tracking-widest text-gray-600" style={{ fontFamily: "'JetBrains Mono', monospace" }}> WEEKS</span>
+
+                               
+                                {calculateMessage ? (
+                                    <div
+                                        style={{
+                                            marginBottom: "16px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #2a2a2a",
+                                            backgroundColor: "#1a1a1a",
+                                            padding: "12px 16px",
+                                            fontSize: "12px",
+                                            color: "#a1a1aa",
+                                        }}
+                                    >
+                                        {calculateMessage}
+                                    </div>
+                                ) : null}
+                                {calculateErrors.length > 0 ? (
+                                    <div
+                                        style={{
+                                            marginBottom: "24px",
+                                            borderRadius: "8px",
+                                            border: "1px solid rgba(239,68,68,0.3)",
+                                            backgroundColor: "rgba(239,68,68,0.08)",
+                                            padding: "12px 16px",
+                                            fontSize: "12px",
+                                            color: "#fca5a5",
+                                        }}
+                                    >
+                                        {calculateErrors.map((error, index) => (
+                                            <div key={`${error}-${index}`}>{error}</div>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                <VolumeOverview
+                                    weekName={data?.result.weekname || []}
+                                    id={id || ""}
+                                    onWeekChange={({ weekId, weekNumber, isFinalWeek }) => {
+                                        setSelectedWeekId(weekId)
+                                        setSelectedWeekNumber(weekNumber)
+                                        setSelectedWeekIsFinal(isFinalWeek)
+                                        setCalculateMessage("")
+                                        setCalculateErrors([])
+                                    }}
+                                />
                             </div>
+
                         </div>
                     </div>
-
-                    
-                    <div className="mx-12 my-10 h-px bg-white/10" />
-                    <div className="px-12 mt-10 pb-16">
-                            <div className="mb-6 flex flex-wrap items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleCalculateNextWeek}
-                                    disabled={selectedWeekIsFinal || isCalculating || !selectedWeekId}
-                                    className="inline-flex items-center justify-center rounded-md border border-[#c8ff00] px-4 py-2 text-xs tracking-widest text-[#c8ff00] transition-colors hover:bg-[#c8ff00] hover:text-black disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#c8ff00]"
-                                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                                >
-                                    {selectedWeekIsFinal
-                                        ? "MESOCYCLE COMPLETE"
-                                        : isCalculating
-                                            ? "CALCULATING..."
-                                            : "CALCULATE VOLUME FOR NEXT WEEK"}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleResetFromSelectedWeek}
-                                    disabled={isResetting || !selectedWeekId || selectedWeekNumber === 1}
-                                    className="inline-flex items-center justify-center rounded-md border border-red-400/70 px-4 py-2 text-xs tracking-widest text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                                >
-                                    {isResetting ? "RESETTING..." : "RESET FROM SELECTED WEEK"}
-                                </button>
-                            </div>
-                            {calculateMessage ? (
-                                <div className="mb-4 rounded-md border border-white/10 bg-white/5 px-4 py-3 text-xs text-gray-300">
-                                    {calculateMessage}
-                                </div>
-                            ) : null}
-                            {calculateErrors.length > 0 ? (
-                                <div className="mb-6 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-                                    {calculateErrors.map((error, index) => (
-                                        <div key={`${error}-${index}`}>{error}</div>
-                                    ))}
-                                </div>
-                            ) : null}
-                            <VolumeOverview
-                                weekName={data?.result.weekname || []}
-                                id={id || ""}
-                                onWeekChange={({ weekId, weekNumber, isFinalWeek }) => {
-                                    setSelectedWeekId(weekId)
-                                    setSelectedWeekNumber(weekNumber)
-                                    setSelectedWeekIsFinal(isFinalWeek)
-                                    setCalculateMessage("")
-                                    setCalculateErrors([])
-                                }}
-                            />
-                    </div>
-
-                </div>
-            </div>
-            )
-        }
+                )
+            }
         </>
-            
-         
-);
+
+
+    );
 
 }

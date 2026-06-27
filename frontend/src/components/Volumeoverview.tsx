@@ -84,13 +84,23 @@ export default function VolumeOverview({
 
     return (
         <div>
-            <div className="mb-7">
+            {/* ── WEEK TABS ── */}
+            <div style={{ marginBottom: "32px" }}>
                 {weekName == null ? (
-                    "Loading..."
+                    <p style={{ color: "#6b7280", fontSize: "13px" }}>Loading...</p>
                 ) : weekName.length === 0 ? (
-                    "No weeks found"
+                    <p style={{ color: "#6b7280", fontSize: "13px" }}>No weeks found</p>
                 ) : (
-                    <div className="flex gap-3">
+                    <div
+                        style={{
+                            display: "inline-flex",
+                            gap: "4px",
+                            backgroundColor: "#1a1a1a",
+                            border: "1px solid #2a2a2a",
+                            borderRadius: "10px",
+                            padding: "4px",
+                        }}
+                    >
                         {sortedWeeks.map((week, index) => {
                             const isActive = weeknumber === index + 1
                             const isLocked = !week.unlocked
@@ -100,83 +110,102 @@ export default function VolumeOverview({
                                     key={week.id}
                                     data-weekId={week.id}
                                     onClick={() => handleWeekSelect(week, index)}
-                                    className={`
-                                        group relative overflow-hidden rounded-lg
-                                        border transition-all duration-200
-                                        font-spaceMono text-xs tracking-wider px-7 py-3.5
-                                        ${isLocked
-                                            ? "border-neutral-800/50 text-neutral-600 cursor-not-allowed opacity-60"
-                                            : isActive
-                                                ? "border-[#c8ff00] text-white bg-[rgba(200,255,0,0.08)] cursor-pointer"
-                                                : "border-neutral-800 text-neutral-500 hover:text-neutral-200 hover:border-neutral-500 cursor-pointer"
-                                        }
-                                    `}
+                                    title={isLocked ? "Complete previous week to unlock" : undefined}
+                                    style={{
+                                        position: "relative",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        padding: "7px 16px",
+                                        borderRadius: "7px",
+                                        fontSize: "13px",
+                                        fontWeight: isActive ? 500 : 400,
+                                        cursor: isLocked ? "not-allowed" : "pointer",
+                                        transition: "background 0.15s, color 0.15s",
+                                        backgroundColor: isActive && !isLocked ? "#ffffff" : "transparent",
+                                        color: isActive && !isLocked
+                                            ? "#000000"
+                                            : isLocked
+                                                ? "#3f3f46"
+                                                : "#a1a1aa",
+                                        userSelect: "none",
+                                    }}
                                 >
+                                    <span>{week.week_name}</span>
                                     {isLocked && (
-                                        <div className="
-                                            absolute -top-10 left-1/2 -translate-x-1/2
-                                            px-3 py-1.5 rounded-md
-                                            bg-neutral-800 border border-neutral-700
-                                            text-neutral-400 text-[10px] tracking-wide
-                                            opacity-0 group-hover:opacity-100
-                                            transition-opacity duration-200
-                                            pointer-events-none whitespace-nowrap
-                                            z-10
-                                        ">
-                                            Complete previous week to unlock
-                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-neutral-800 border-r border-b border-neutral-700 rotate-45" />
-                                        </div>
+                                        <svg
+                                            width="11"
+                                            height="11"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            style={{ color: "#3f3f46", flexShrink: 0 }}
+                                        >
+                                            <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
+                                            <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                        </svg>
                                     )}
-
-                                    <span
-                                        className={`
-                                            absolute bottom-0 left-0 h-[2px] bg-[#c8ff00]
-                                            transition-all duration-200
-                                            ${isActive && !isLocked ? "w-full" : "w-0"}
-                                        `}
-                                    />
-
-                                    <span className="flex items-center gap-2">
-                                        {week.week_name}
-                                        {isLocked && (
-                                            <svg
-                                                width="12"
-                                                height="12"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                className="text-neutral-600"
-                                            >
-                                                <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" />
-                                                <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                            </svg>
-                                        )}
-                                    </span>
                                 </div>
                             )
                         })}
                     </div>
                 )}
             </div>
+
+            {/* ── SECTION HEADER ── */}
             <div>
-                <div className="mb-4 flex items-center justify-between">
-                    <p className="text-white text-base font-semibold">
-                        Week {weeknumber} - Volume Overview
+                <div
+                    className="flex items-center justify-between"
+                    style={{ marginBottom: "16px" }}
+                >
+                    <p
+                        style={{
+                            fontSize: "15px",
+                            fontWeight: 600,
+                            color: "#ffffff",
+                        }}
+                    >
+                        Week {weeknumber} — Volume Overview
                     </p>
                     <button
                         data-weekId={weekid}
                         disabled={!weekid}
                         onClick={() => navigate(`/mesocycle/week/${weekid}/?mesoId=${id}`)}
-                        className="flex items-center gap-2 text-xs tracking-widest transition-all duration-200 hover:gap-3 text-[#c8ff00] disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "12px",
+                            color: !weekid ? "#3f3f46" : "#6b7280",
+                            background: "none",
+                            border: "none",
+                            cursor: !weekid ? "not-allowed" : "pointer",
+                            padding: 0,
+                            transition: "color 0.15s",
+                            fontFamily: "inherit",
+                            textDecoration: "none",
+                        }}
+                        onMouseEnter={e => { if (weekid) e.currentTarget.style.color = "#a1a1aa" }}
+                        onMouseLeave={e => { if (weekid) e.currentTarget.style.color = "#6b7280" }}
                     >
-                        GO TO WEEK {weeknumber}
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <path d="M3 7h8M8 4l3 3-3 3" stroke="#c8ff00" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                        Go to Week {weeknumber}
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                            <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </button>
                 </div>
 
-                <div className="border rounded-lg border-[#3C3F40] bg-[#090B0D]">
+                {/* thin divider */}
+                <div style={{ height: "1px", backgroundColor: "#1e1e1e", marginBottom: "16px" }} />
+
+                {/* Volume table */}
+                <div
+                    style={{
+                        backgroundColor: "#1a1a1a",
+                        border: "1px solid #2a2a2a",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                    }}
+                >
                     <VolumeGraph weekvolume={weekvolume} />
                 </div>
             </div>
