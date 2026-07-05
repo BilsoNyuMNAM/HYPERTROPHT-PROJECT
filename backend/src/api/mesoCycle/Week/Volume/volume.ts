@@ -260,11 +260,13 @@ volumeRoute.get("/:weekId", authMiddleware, async (c)=>{
         frequencyMuscles,
     })
 
-    const formattedvolumeResult = displayRows.map((vol) => ({
-        starting_volume: vol.set,
-        muscle_name: vol.muscle_name,
-        volume_completed: muscleVolume[vol.muscle_name] ? muscleVolume[vol.muscle_name] : 0,
-    }))
+    const formattedvolumeResult = displayRows
+        .filter((vol) => vol.set > 0)
+        .map((vol) => ({
+            starting_volume: vol.set,
+            muscle_name: vol.muscle_name,
+            volume_completed: muscleVolume[vol.muscle_name] ? muscleVolume[vol.muscle_name] : 0,
+        }))
 
     
       

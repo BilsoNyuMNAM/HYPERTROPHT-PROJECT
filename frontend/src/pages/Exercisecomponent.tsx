@@ -94,28 +94,18 @@ export default function Exercisecomponent({
         setApiCall(prev => new Set(prev).add(muscleName))
     }
 
-    /** Commits the muscle selection: fetches soreness data, updates local + shared state. */
     function applyMuscleSelection(muscleName: string) {
         fetchSorenessIfNeeded(muscleName)
         setSelected(muscleName)
         Selecttrainedmuscle(id, muscleName)
     }
 
-    /**
-     * Called when the user clicks a muscle in the dropdown.
-     * Deselects if same muscle, warns if over-target, otherwise applies immediately.
-     */
     function handleMuscleSelect(clickedMuscleName: string) {
-        // Deselect if the user clicks the already-selected muscle
         if (selected === clickedMuscleName) {
             setSelected("")
             Selecttrainedmuscle(id, "")
             return
         }
-
-        // Warn before confirming a selection that would exceed the weekly volume target.
-        // getMuscleSetsLeft returns the remaining sets WITHOUT the current exercise's sets
-        // counted, so comparing against set.length is the correct check.
         const remainingSets = getMuscleSetsLeft(clickedMuscleName)
         if (remainingSets !== null && set.length > remainingSets) {
             setPendingMuscleSelection({
@@ -124,7 +114,6 @@ export default function Exercisecomponent({
             })
             return
         }
-
         applyMuscleSelection(clickedMuscleName)
     }
 
@@ -138,103 +127,248 @@ export default function Exercisecomponent({
         setPendingMuscleSelection(null)
     }
 
-    // True when the current exercise is already over the weekly target for its muscle
     const isOverTarget = muscletrained !== "" && setsLeft !== null && setsLeft < 0
 
     return (
-        <div className="mb-3">
-            <div className="border border-[#222] rounded-[10px] bg-[#0c0c0c]">
-                <div className="p-5">
+        <div style={{ marginBottom: "12px" }}>
+            <div
+                style={{
+                    border: "1px solid #2a2a2a",
+                    borderRadius: "12px",
+                    backgroundColor: "#1a1a1a",
+                }}
+            >
+                <div style={{ padding: "20px" }}>
 
                     {/* Exercise name + delete */}
-                    <div className="border-gray-400 flex items-center gap-3">
+                    <div className="flex items-center gap-3" style={{ marginBottom: "12px" }}>
                         <input
-                            placeholder="exercise name"
+                            placeholder="Exercise name"
                             onChange={(e) => exerciseName(e, id)}
                             value={exercise_name}
                             name="exercise_name"
-                            className="outline-none h-5 font-bold tracking-[0.12em] w-full text-xs uppercase font-spaceMono appearance-none border-none"
+                            style={{
+                                flex: 1,
+                                background: "none",
+                                border: "none",
+                                outline: "none",
+                                fontSize: "14px",
+                                fontWeight: 600,
+                                letterSpacing: "0.02em",
+                                color: "#ffffff",
+                                fontFamily: "inherit",
+                            }}
                         />
                         <button
                             onClick={() => deleteExercise(id)}
-                            className="border border-[#2a2a2a] rounded-[8px] px-3 py-2 text-[10px] tracking-[0.12em] text-[#9ca3af] transition-colors duration-150 hover:text-red-400 hover:border-red-400 cursor-pointer"
+                            style={{
+                                flexShrink: 0,
+                                border: "1px solid #2a2a2a",
+                                borderRadius: "6px",
+                                padding: "5px 10px",
+                                fontSize: "10px",
+                                letterSpacing: "0.1em",
+                                textTransform: "uppercase",
+                                color: "#6b7280",
+                                background: "none",
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                                transition: "color 0.15s, border-color 0.15s",
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.color = "#f87171"
+                                e.currentTarget.style.borderColor = "rgba(248,113,113,0.4)"
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.color = "#6b7280"
+                                e.currentTarget.style.borderColor = "#2a2a2a"
+                            }}
                         >
-                            DELETE EXERCISE
+                            Delete
                         </button>
                     </div>
 
                     {/* Muscle selector */}
-                    <div className="relative text-[10px] pb-3 mt-1 tracking-[0.12em] text-[#555] uppercase font-spaceMono select-none">
-                        <span onClick={() => { setOpen(!isOpen); setCurrentDropdown(id) }}>
-                            Muscle trained
-                        </span>
-
-                        {selected !== "" && (
-                            <button
-                                className="ml-2 text-[10px] border rounded-lg font-spaceMono tracking-[0.06em] py-[4px] px-[10px] rounded-[3px] cursor-pointer transition duration-150"
-                                style={{ borderColor: MUSCLE_COLORS[selected] }}
+                    <div
+                        style={{
+                            position: "relative",
+                            fontSize: "11px",
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            color: "#6b7280",
+                            userSelect: "none",
+                            paddingBottom: "14px",
+                        }}
+                    >
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                                onClick={() => { setOpen(!isOpen); setCurrentDropdown(id) }}
+                                style={{ cursor: "pointer" }}
                             >
-                                {selected}
-                            </button>
-                        )}
+                                Muscle trained
+                            </span>
 
+                            {selected !== "" && (
+                                <button
+                                    style={{
+                                        fontSize: "10px",
+                                        letterSpacing: "0.06em",
+                                        border: `1px solid ${MUSCLE_COLORS[selected] || "#3f3f46"}`,
+                                        borderRadius: "6px",
+                                        padding: "3px 10px",
+                                        color: MUSCLE_COLORS[selected] || "#a1a1aa",
+                                        background: "none",
+                                        cursor: "pointer",
+                                        fontFamily: "inherit",
+                                        textTransform: "uppercase",
+                                    }}
+                                >
+                                    {selected}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Soreness logged */}
                         {sorenessLog && (
-                            <div className="mt-2 p-4 border border-[rgb(201,106,0)] rounded-lg">
-                                {/* @ts-ignore */}
-                                <p>
-                                    <span className="font-bold text-[rgb(245,160,48)]">Soreness logged:</span>{" "}
-                                    Score-{sorenessLog.level} {sorenessLog.label}
-                                </p>
+                            <div
+                                style={{
+                                    marginTop: "8px",
+                                    padding: "10px 14px",
+                                    border: "1px solid rgba(249,115,22,0.3)",
+                                    borderRadius: "8px",
+                                    backgroundColor: "rgba(249,115,22,0.06)",
+                                    fontSize: "11px",
+                                    color: "#fb923c",
+                                }}
+                            >
+                                <span style={{ fontWeight: 600 }}>Soreness logged:</span>{" "}
+                                Score {sorenessLog.level} — {sorenessLog.label}
                             </div>
                         )}
 
-                        {/* Over-target inline warning — appears reactively as sets are added */}
+                        {/* Over-target warning */}
                         {isOverTarget && (
-                            <p className="mt-2 text-orange-400 tracking-[0.08em]">
+                            <p
+                                style={{
+                                    marginTop: "6px",
+                                    fontSize: "11px",
+                                    color: "#fb923c",
+                                    letterSpacing: "0.06em",
+                                }}
+                            >
                                 {Math.abs(setsLeft!)} {Math.abs(setsLeft!) === 1 ? "set" : "sets"} over weekly target
                             </p>
                         )}
 
                         {/* Muscle dropdown */}
                         {isOpen && id === currentDropdown && (
-                            <div className="absolute z-10 bg-[#0c0c0c] border border-[#222] rounded-[5px] p-3 flex gap-3 flex-wrap">
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    zIndex: 10,
+                                    top: "100%",
+                                    left: 0,
+                                    width: "100%",
+                                    boxSizing: "border-box",
+                                    backgroundColor: "#111111",
+                                    border: "1px solid #2a2a2a",
+                                    borderRadius: "10px",
+                                    padding: "12px",
+                                    display: "flex",
+                                    gap: "8px",
+                                    flexWrap: "wrap",
+                                    minWidth: "260px",
+                                    marginTop: "4px",
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                                }}
+                            >
                                 {pendingMuscleSelection ? (
-                                    /* Over-limit confirmation — shown instead of the muscle list */
-                                    <div className="basis-full p-3 border border-orange-500/30 rounded-[8px] bg-orange-500/10">
-                                        <p className="text-orange-400 text-[11px] mb-3 leading-relaxed">
-                                            <span className="font-bold uppercase">{pendingMuscleSelection.muscleName}</span> is{" "}
-                                            <span className="font-bold">{pendingMuscleSelection.setsOver}</span>{" "}
+                                    /* Over-limit confirmation */
+                                    <div
+                                        style={{
+                                            flexBasis: "100%",
+                                            padding: "12px",
+                                            border: "1px solid rgba(249,115,22,0.3)",
+                                            borderRadius: "8px",
+                                            backgroundColor: "rgba(249,115,22,0.08)",
+                                        }}
+                                    >
+                                        <p
+                                            style={{
+                                                color: "#fb923c",
+                                                fontSize: "11px",
+                                                marginBottom: "10px",
+                                                lineHeight: 1.5,
+                                            }}
+                                        >
+                                            <span style={{ fontWeight: 700, textTransform: "uppercase" }}>
+                                                {pendingMuscleSelection.muscleName}
+                                            </span>{" "}
+                                            is{" "}
+                                            <span style={{ fontWeight: 700 }}>{pendingMuscleSelection.setsOver}</span>{" "}
                                             {pendingMuscleSelection.setsOver === 1 ? "set" : "sets"} over the weekly target. Continue anyway?
                                         </p>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={confirmPendingMuscleSelection}
-                                                className="text-[10px] border border-orange-500/60 text-orange-400 py-[6px] px-3 rounded-[5px] cursor-pointer hover:bg-orange-500/20 transition-colors duration-150"
+                                                style={{
+                                                    fontSize: "10px",
+                                                    border: "1px solid rgba(249,115,22,0.5)",
+                                                    borderRadius: "6px",
+                                                    padding: "6px 12px",
+                                                    color: "#fb923c",
+                                                    background: "none",
+                                                    cursor: "pointer",
+                                                    fontFamily: "inherit",
+                                                }}
                                             >
-                                                Keep sets &amp; continue
+                                                Keep sets & continue
                                             </button>
                                             <button
                                                 onClick={cancelPendingMuscleSelection}
-                                                className="text-[10px] border border-[#333] text-[#9ca3af] py-[6px] px-3 rounded-[5px] cursor-pointer hover:border-[#555] transition-colors duration-150"
+                                                style={{
+                                                    fontSize: "10px",
+                                                    border: "1px solid #2a2a2a",
+                                                    borderRadius: "6px",
+                                                    padding: "6px 12px",
+                                                    color: "#6b7280",
+                                                    background: "none",
+                                                    cursor: "pointer",
+                                                    fontFamily: "inherit",
+                                                }}
                                             >
                                                 Cancel
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
-                                    /* Normal muscle selection list */
                                     <>
                                         {muscle.map(musclename => (
                                             <button
                                                 key={musclename}
                                                 onClick={() => handleMuscleSelect(musclename)}
-                                                className="text-[10px] border rounded-lg font-spaceMono tracking-[0.06em] py-[10px] px-[10px] rounded-[3px] cursor-pointer transition duration-150 border text-gray-[400]"
-                                                style={{ borderColor: selected === musclename ? MUSCLE_COLORS[musclename] : "#222" }}
+                                                style={{
+                                                    fontSize: "10px",
+                                                    letterSpacing: "0.06em",
+                                                    textTransform: "uppercase",
+                                                    border: `1px solid ${selected === musclename ? MUSCLE_COLORS[musclename] || "#ffffff" : "#2a2a2a"}`,
+                                                    borderRadius: "6px",
+                                                    padding: "6px 10px",
+                                                    color: selected === musclename
+                                                        ? MUSCLE_COLORS[musclename] || "#ffffff"
+                                                        : "#6b7280",
+                                                    background: selected === musclename
+                                                        ? `${MUSCLE_COLORS[musclename]}18` || "rgba(255,255,255,0.05)"
+                                                        : "none",
+                                                    cursor: "pointer",
+                                                    fontFamily: "inherit",
+                                                    transition: "all 0.15s",
+                                                }}
                                             >
                                                 {musclename}
                                             </button>
                                         ))}
-                                        <div className="basis-full">
+                                        <div style={{ flexBasis: "100%" }}>
                                             {showSorenessFeedback && (
                                                 <Feedback
                                                     sorenessLog={sorenessLog}
@@ -253,34 +387,65 @@ export default function Exercisecomponent({
                     </div>
 
                     {/* Sets area */}
-                    <div className="min-h-30 border border-[#222] rounded-[10px] py-5 px-6 bg-[#0c0c0c]">
-                        <div>
-                            {set.length === 0 ? (
-                                <div className="w-full flex justify-center items-center h-full">
-                                    <p>Add your first set</p>
-                                </div>
-                            ) : (
-                                set.map((s: any) => (
-                                    <SetComponent
-                                        key={s.id}
-                                        exerciseid={id}
-                                        setdata={s}
-                                        addsetData={addsetData}
-                                        deleteSet={deleteSet}
-                                    />
-                                ))
-                            )}
-                        </div>
-                        <div className="flex flex-col items-center mt-3 gap-1">
-                            <button
-                                className="text-xs font-spaceMono cursor-pointer"
-                                onClick={() => addset(id)}
+                    <div
+                        style={{
+                            border: "1px solid #2a2a2a",
+                            borderRadius: "10px",
+                            backgroundColor: "#111111",
+                            overflow: "hidden",
+                        }}
+                    >
+                        {set.length === 0 ? (
+                            <div
+                                style={{
+                                    padding: "24px",
+                                    textAlign: "center",
+                                    color: "#3f3f46",
+                                    fontSize: "13px",
+                                }}
                             >
-                                + ADD SET
+                                Add your first set
+                            </div>
+                        ) : (
+                            set.map((s: any) => (
+                                <SetComponent
+                                    key={s.id}
+                                    exerciseid={id}
+                                    setdata={s}
+                                    addsetData={addsetData}
+                                    deleteSet={deleteSet}
+                                />
+                            ))
+                        )}
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "12px",
+                                borderTop: set.length > 0 ? "1px solid #1e1e1e" : "none",
+                            }}
+                        >
+                            <button
+                                onClick={() => addset(id)}
+                                style={{
+                                    fontSize: "11px",
+                                    letterSpacing: "0.06em",
+                                    color: "#6b7280",
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    transition: "color 0.15s",
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "#a1a1aa")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                            >
+                                + Add Set
                             </button>
-                            {/* Hint shown only when no muscle has been selected yet */}
                             {muscletrained === "" && (
-                                <p className="text-[10px] font-spaceMono text-[#444]">
+                                <p style={{ fontSize: "10px", color: "#3f3f46" }}>
                                     Select a muscle to track volume
                                 </p>
                             )}

@@ -88,32 +88,29 @@ frequencyroute.get("/muscle", authMiddleware, async (c)=>{
         return c.json({ error: "Mesocycle not found" }, 404)
     }
 
-    let queryResult = await prisma.session.count({
-        where:{
-            weekId: weekId,
+    const queryResult = await prisma.session.count({
+        where: {
+            week: {
+                mesocycleId: mesoId,
+                deletedAt: null,
+            },
             deletedAt: null,
-            exerciselogs:{
-                some:{
+            exerciselogs: {
+                some: {
                     deletedAt: null,
-                    exercise:{
-                        muscleId:muscleId
+                    exercise: {
+                        muscleId: muscleId
                     }
                 }
             }
         }
     })
-    queryResult += 1
-    queryResult > 1 &&
-    queryResult <= (activeMesocycle?.frequency[0]?.timesPerWeek ?? 0)
-        ? showSorenessFeedback = true
-        : showSorenessFeedback = false
 
-    
+    showSorenessFeedback = queryResult > 0
 
-    
     return c.json({
         showSorenessFeedback: showSorenessFeedback
-    },200)
-})       
+    }, 200)
+})
 
 export default frequencyroute;

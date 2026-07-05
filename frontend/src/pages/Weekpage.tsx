@@ -1,72 +1,200 @@
-import { useNavigate, useParams,useSearchParams } from "react-router-dom"
-import { useState} from "react"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { useState } from "react"
 import Sessioncard from "../components/Sessioncard"
 import { useQuery } from "@tanstack/react-query"
 import { Get, Post, Delete } from "../service/centralisedApi.js"
 import { Spinner } from "../components/ui/spinner"
+import DeleteDialog from "./DeleteDialog"
+
 type SessionListItem = {
     id: number
     session_name: string
 }
 
-function Createsessionpage({weekId, setDisplaySession, refetch}:{weekId:string, setDisplaySession:any, refetch:any}){
+function Createsessionpage({
+    weekId,
+    setDisplaySession,
+    refetch,
+}: {
+    weekId: string
+    setDisplaySession: any
+    refetch: any
+}) {
     const [searchParams] = useSearchParams()
     const [isLoading, setIsLoading] = useState(false)
     const mesoId = searchParams.get("mesoId")
-    const [sessionName, setSessionName] = useState("");
-    function handlechange(e:any){
-        const {value} = e.target
+    const [sessionName, setSessionName] = useState("")
+
+    function handlechange(e: any) {
+        const { value } = e.target
         setSessionName(value)
     }
-    async function Submit(){
+
+    async function Submit() {
         setIsLoading(true)
-       try{
+        try {
             const res = await Post(`/mesoCycle/session/create/${weekId}?sessionId=${mesoId}`, {
-                session_name: sessionName
-            })          
-            if(res.status === 201){
+                session_name: sessionName,
+            })
+            if (res.status === 201) {
                 setDisplaySession(false)
-                refetch();
-             }
-        
-       }
-       catch(error){
-           console.error("Error creating session:", error)
-       }
-       finally{
-        setIsLoading(false)
-       }
-        
-       
-       
+                refetch()
+            }
+        } catch (error) {
+            console.error("Error creating session:", error)
+        } finally {
+            setIsLoading(false)
+        }
     }
-    return(
-        <div className=" fixed z-10 h-screen w-full text-white bg-black   inset-0">
-            <div className="p-3 h-screen w-full flex justify-center items-center mx-auto">
-                <div className="w-full max-w-md flex flex-col items-center">
-                    <div> 
-                        <h1 className="text-5xl font-spaceMono">CREATE SESSION</h1>
-                    </div>
-                    <div className="mt-2 mb-10"> 
-                            <p className="text-gray-400">Name you session to get started</p>
-                    </div>
-                    <div className="w-full px-20 mb-10">
-                        <input type="text" onChange={(e)=>{handlechange(e)}} name="session" value={sessionName} placeholder="Session name" className="border rounded-lg p-2 w-full"/>
-                    </div>
-                    <div className="w-full">
-                        <button onClick={Submit} className="cursor-pointer bg-white text-black tracking-wide w-full flex items-center justify-center  px-10 py-3 border font-thin rounded-lg" disabled={isLoading}> {isLoading?<div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin "/>:"CREATE SESSION"}</button>
-                    </div>
-            </div>  
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10,
+                backgroundColor: "#0f0f0f",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "'Inter', 'Geist', system-ui, sans-serif",
+            }}
+        >
+            <div style={{ width: "100%", maxWidth: "420px", padding: "0 24px" }}>
+                {/* Close / back */}
+                <button
+                    onClick={() => setDisplaySession(false)}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "12px",
+                        letterSpacing: "0.05em",
+                        color: "#6b7280",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: 0,
+                        marginBottom: "40px",
+                        fontFamily: "inherit",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#a1a1aa")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Cancel
+                </button>
+
+                {/* Heading */}
+                <p
+                    style={{
+                        fontSize: "11px",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "#6b7280",
+                        marginBottom: "8px",
+                    }}
+                >
+                    New Session
+                </p>
+                <h1
+                    style={{
+                        fontSize: "2.2rem",
+                        fontWeight: 700,
+                        color: "#ffffff",
+                        letterSpacing: "-0.02em",
+                        lineHeight: 1.1,
+                        marginBottom: "8px",
+                    }}
+                >
+                    Create Session
+                </h1>
+                <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "32px" }}>
+                    Name your session to get started
+                </p>
+
+                {/* Input */}
+                <div style={{ marginBottom: "16px" }}>
+                    <input
+                        type="text"
+                        onChange={handlechange}
+                        name="session"
+                        value={sessionName}
+                        placeholder="Session name"
+                        style={{
+                            width: "100%",
+                            backgroundColor: "#1a1a1a",
+                            border: "1px solid #2a2a2a",
+                            borderRadius: "8px",
+                            padding: "12px 16px",
+                            fontSize: "14px",
+                            color: "#ffffff",
+                            outline: "none",
+                            fontFamily: "inherit",
+                            boxSizing: "border-box",
+                            transition: "border-color 0.15s",
+                        }}
+                        onFocus={e => (e.currentTarget.style.borderColor = "#3f3f46")}
+                        onBlur={e => (e.currentTarget.style.borderColor = "#2a2a2a")}
+                    />
+                </div>
+
+                {/* Submit */}
+                <button
+                    onClick={Submit}
+                    disabled={isLoading || sessionName.trim() === ""}
+                    style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        backgroundColor: isLoading || sessionName.trim() === "" ? "#2a2a2a" : "#ffffff",
+                        color: isLoading || sessionName.trim() === "" ? "#6b7280" : "#000000",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "13px",
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        letterSpacing: "0.04em",
+                        cursor: isLoading || sessionName.trim() === "" ? "not-allowed" : "pointer",
+                        opacity: isLoading || sessionName.trim() === "" ? 0.5 : 1,
+                        transition: "opacity 0.15s",
+                        fontFamily: "inherit",
+                    }}
+                >
+                    {isLoading ? (
+                        <>
+                            <div
+                                style={{
+                                    width: "14px",
+                                    height: "14px",
+                                    border: "2px solid #6b7280",
+                                    borderTopColor: "transparent",
+                                    borderRadius: "50%",
+                                    animation: "spin 0.7s linear infinite",
+                                }}
+                            />
+                            Creating...
+                        </>
+                    ) : (
+                        "Create Session"
+                    )}
+                </button>
             </div>
         </div>
     )
 }
 
 
-export default function Weekpage(){
+// ── WEEK PAGE ───────────────────────────────────────────────────────────────
+export default function Weekpage() {
+     const [searchParam] = useSearchParams()
+     const weeknumber = searchParam.get("weeknumber");
     const navigate = useNavigate()
-    const {weekId} = useParams()
-    // const [isLoading, setIsLoading] = useState(false)
+    const { weekId } = useParams()
     const [displaySession, setDisplaySession] = useState(false)
     const [weekStatus, setWeekStatus] = useState<{
         unlocked: boolean
@@ -74,118 +202,305 @@ export default function Weekpage(){
         isFinalWeek: boolean
     } | null>(null)
     const [loadError, setLoadError] = useState("")
-    
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [deleteSessionInfo, setDeleteSessionInfo] = useState<{ id: number; name: string } | null>(null)
 
     const [searchParams] = useSearchParams()
     const mesoId = searchParams.get("mesoId") || ""
-    const {data, refetch, isLoading} = useQuery({
+
+    const { data, refetch, isLoading } = useQuery({
         queryKey: ["sessions", weekId],
-        queryFn: async function(){
+        queryFn: async function () {
             const response = await Get(`/mesoCycle/session/all/${weekId}`)
             if (!response.ok) {
                 throw new Error(`Failed to fetch sessions: ${response.status}`)
             }
             return await response.json()
-        }
+        },
     })
 
-    const sessionDisplay = data?.result.sessions.length == 0?<p>No session to display </p>: data?.result.sessions.map((session, index)=>{
-        return(
-            <Sessioncard
-                key={session.id}
-                id={session.id}
-                sessionName={session.session_name}
-                number={index+1}
-                weekId={weekId || ""}
-                mesoId={mesoId}
-                onDeleteSession={deleteSession}
-                
-                isLoading={isLoading}
-            />
-        )
-    })
+    function handleDeleteClick(sessionId: number, sessionName: string) {
+        setDeleteSessionInfo({ id: sessionId, name: sessionName })
+        setShowDeleteDialog(true)
+    }
 
-    async function deleteSession(sessionId: number, currentSessionName: string) {
-        // setIsLoading(true)
-        const deleteConfirmed = window.confirm(
-            `Delete ${currentSessionName}? This removes the session from the current week.`
-        ) 
-        if (!deleteConfirmed) {
-            // setIsLoading(false)
-            return
-        } 
-        try{
+    async function performDeleteSession(sessionId: number) {
+        try {
             const response = await Delete(`/mesoCycle/session/${sessionId}`)
             const data = await response.json()
             if (!response.ok) {
-            setLoadError(data.message || "Unable to delete session")
-            return
-        }
-        }
-        catch(error){
+                setLoadError(data.message || "Unable to delete session")
+                return
+            }
+        } catch (error) {
             console.error("Error deleting session:", error)
             setLoadError("An error occurred while deleting the session")
             return
+        } finally {
+            refetch()
         }
-        finally{
-            // setIsLoading(false)
-            refetch();
-        }
-        
-
-        
     }
 
-    
-    return(
-        <div className="h-screen w-full bg-black text-white overflow-y-auto">
-            <div className="w-full h-screen max-w-5xl mx-auto mt-7 ">
-                <div className="px-8 py-6">
-                    <div className={`${displaySession?"fixed":""}  z-20 mb-10 `}>
-                        <button onClick={()=>{navigate(-1)}}className="cursor-pointer font-spaceMono">← Back to Week</button>
+    const sessions: SessionListItem[] = data?.result.sessions ?? []
+
+    // Week status pill label
+    const weekStatusLabel = weekStatus?.isFinalWeek
+        ? "Final Week"
+        : weekStatus?.nextWeekUnlocked
+            ? "Next Week Unlocked"
+            : "Next Week Locked"
+
+    const weekStatusColor = weekStatus?.isFinalWeek
+        ? { dot: "#22c55e", text: "#22c55e" }
+        : weekStatus?.nextWeekUnlocked
+            ? { dot: "#22c55e", text: "#22c55e" }
+            : { dot: "#6b7280", text: "#6b7280" }
+
+    return (
+        <div
+            className="h-screen w-full overflow-y-auto"
+            style={{
+                backgroundColor: "#0f0f0f",
+                color: "#ffffff",
+                fontFamily: "'Inter', 'Geist', system-ui, sans-serif",
+            }}
+        >
+            {/* Create session overlay */}
+            {displaySession ? (
+                <Createsessionpage
+                    weekId={weekId || ""}
+                    setDisplaySession={setDisplaySession}
+                    refetch={refetch}
+                />
+            ) : null}
+
+            {showDeleteDialog && deleteSessionInfo && (
+                <DeleteDialog
+                    onConfirm={() => {
+                        performDeleteSession(deleteSessionInfo.id)
+                        setShowDeleteDialog(false)
+                        setDeleteSessionInfo(null)
+                    }}
+                    onCancel={() => {
+                        setShowDeleteDialog(false)
+                        setDeleteSessionInfo(null)
+                    }}
+                />
+            )}
+
+            <div className="w-full max-w-4xl mx-auto">
+
+                {/* ── NAV ── */}
+                <nav
+                    className="flex items-center px-10 py-6"
+                    style={{ borderBottom: "1px solid #1e1e1e" }}
+                >
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-1.5 transition-colors"
+                        style={{
+                            fontSize: "12px",
+                            letterSpacing: "0.05em",
+                            color: "#6b7280",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 0,
+                            fontFamily: "inherit",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.color = "#a1a1aa")}
+                        onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                            <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Back to Week
+                    </button>
+                </nav>
+
+                {/* ── HEADER ── */}
+                <div className="px-10 pt-10 pb-8">
+                    <p
+                        style={{
+                            fontSize: "11px",
+                            letterSpacing: "0.12em",
+                            color: "#6b7280",
+                            textTransform: "uppercase",
+                            marginBottom: "8px",
+                        }}
+                    >
+                        Week
+                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                        <h1
+                            style={{
+                                fontSize: "clamp(1.8rem, 5vw, 2.8rem)",
+                                fontWeight: 700,
+                                lineHeight: 1.1,
+                                color: "#ffffff",
+                                letterSpacing: "-0.02em",
+                            }}
+                        >
+                            Session Plan
+                        </h1>
+
+                        {/* Week status badge */}
+                        {weekStatus !== null && (
+                            <div
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    backgroundColor: "#1a1a1a",
+                                    border: "1px solid #2a2a2a",
+                                    borderRadius: "999px",
+                                    padding: "6px 14px",
+                                    fontSize: "11px",
+                                    letterSpacing: "0.06em",
+                                    color: weekStatusColor.text,
+                                    marginTop: "10px",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        width: "6px",
+                                        height: "6px",
+                                        borderRadius: "50%",
+                                        backgroundColor: weekStatusColor.dot,
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                {weekStatusLabel}
+                            </div>
+                        )}
                     </div>
-                    {displaySession? <Createsessionpage weekId={weekId || ""} setDisplaySession={setDisplaySession} refetch={refetch}/>:
-                    <div>
+                </div>
+
+                {/* ── DIVIDER ── */}
+                <div style={{ height: "1px", backgroundColor: "#1e1e1e", margin: "0 40px" }} />
+
+                {/* ── BODY ── */}
+                <div className="px-10 py-8" style={{ paddingBottom: "80px" }}>
+
+                    {/* Error message */}
+                    {loadError ? (
+                        <div
+                            style={{
+                                marginBottom: "20px",
+                                borderRadius: "8px",
+                                border: "1px solid rgba(239,68,68,0.3)",
+                                backgroundColor: "rgba(239,68,68,0.08)",
+                                padding: "12px 16px",
+                                fontSize: "12px",
+                                color: "#fca5a5",
+                            }}
+                        >
+                            {loadError}
+                        </div>
+                    ) : null}
+
+                    {/* Session list / spinner */}
+                    {isLoading ? (
+                        <div className="flex items-center justify-center py-16">
+                            <Spinner className="w-7 h-7 text-white" />
+                        </div>
+                    ) : (
                         <div>
-                            <div>
-                                <span className="font-spaceMono text-sm">WEEK 1</span>
+                            {/* Section sub-header */}
+                            <div
+                                className="flex items-center justify-between"
+                                style={{ marginBottom: "16px" }}
+                            >
+                                <p
+                                    style={{
+                                        fontSize: "11px",
+                                        letterSpacing: "0.12em",
+                                        textTransform: "uppercase",
+                                        color: "#6b7280",
+                                        fontWeight: 500,
+                                    }}
+                                >
+                                    Sessions
+                                </p>
+                                <span
+                                    style={{
+                                        fontSize: "11px",
+                                        color: "#3f3f46",
+                                    }}
+                                >
+                                    {sessions.length} total
+                                </span>
                             </div>
-                            <div>
-                                <div className="flex justify-between items-center mb-10 pr-4">
-                                    <h1 className="text-4xl font-spaceMono font-bold">SESSION PLAN</h1>
-                                    <div className="flex gap-2 items-center border rounded-lg px-4 py-2 text-xs font-spaceMono text-gray-300">
-                                        {weekStatus?.isFinalWeek
-                                            ? "FINAL WEEK"
-                                            : weekStatus?.nextWeekUnlocked
-                                                ? "NEXT WEEK UNLOCKED"
-                                                : "NEXT WEEK LOCKED"}
-                                    </div>
-                                    
+
+                            {/* Thin divider */}
+                            <div style={{ height: "1px", backgroundColor: "#1e1e1e", marginBottom: "16px" }} />
+
+                            
+                            {sessions.length === 0 ? (
+                                <div
+                                    style={{
+                                        padding: "40px 24px",
+                                        textAlign: "center",
+                                        color: "#3f3f46",
+                                        fontSize: "14px",
+                                    }}
+                                >
+                                    No sessions yet — create your first one below
                                 </div>
-                                {loadError ? (
-                                    <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-                                        {loadError}
-                                    </div>
-                                ) : null}
-                                {
-                                    isLoading? <div className=" bg-black text-white flex items-center justify-center">
-                                    <Spinner className="w-8 h-8 text-[#c8ff00]" /></div>
-                    :(<div>
-                        <div className="p-4">
-                            <div className="mb-10">
-                             {sessionDisplay}
-                            </div>
-                             <div className="flex align-center justify-center ">
-                                <button className="cursor-pointer font-spaceMono" onClick={() => setDisplaySession(true)}>+ Add Session</button>
-                            </div>
-                             </div>
-                              </div>)
-                                }
+                            ) : (
+                                sessions.map((session, index) => (
+                                    <Sessioncard
+                                        key={session.id}
+                                        id={session.id}
+                                        sessionName={session.session_name}
+                                        number={index + 1}
+                                        weekId={weekId || ""}
+                                        mesoId={mesoId}
+                                        onDeleteSession={handleDeleteClick}
+                                        isLoading={isLoading}
+                                        weeknumber={weeknumber || ""}
+                                    />
+                                ))
+                            )}
+
+                            {/* Add session button */}
+                            <button
+                                onClick={() => setDisplaySession(true)}
+                                style={{
+                                    marginTop: "16px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    backgroundColor: "#1a1a1a",
+                                    color: "#a1a1aa",
+                                    border: "1px solid #2a2a2a",
+                                    borderRadius: "8px",
+                                    padding: "10px 18px",
+                                    fontSize: "12px",
+                                    fontWeight: 500,
+                                    letterSpacing: "0.05em",
+                                    cursor: "pointer",
+                                    fontFamily: "inherit",
+                                    transition: "color 0.15s, border-color 0.15s",
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.color = "#ffffff"
+                                    e.currentTarget.style.borderColor = "#3f3f46"
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.color = "#a1a1aa"
+                                    e.currentTarget.style.borderColor = "#2a2a2a"
+                                }}
+                            >
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                    <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                                Add Session
+                            </button>
                         </div>
-                        </div>
-                        <div></div>
-                    </div>}
-                    </div>
+                    )}
+                </div>
             </div>
         </div>
     )

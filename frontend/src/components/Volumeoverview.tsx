@@ -169,7 +169,7 @@ export default function VolumeOverview({
                     <button
                         data-weekId={weekid}
                         disabled={!weekid}
-                        onClick={() => navigate(`/mesocycle/week/${weekid}/?mesoId=${id}`)}
+                        onClick={() => navigate(`/mesocycle/week/${weekid}/?mesoId=${id}&weeknumber=${weeknumber}`)}
                         style={{
                             display: "flex",
                             alignItems: "center",

@@ -31,6 +31,7 @@ function App(){
           <Route path="/mesocycle/week/session/:sessionId" element={<Sessionpage/>}/>
           <Route path="/performance" element={<Performance/>}/>
           <Route path="*" element={<PagenotFound />} />
+         
         </Routes>
       </BrowserRouter>
     </div>

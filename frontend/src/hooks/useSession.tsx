@@ -16,19 +16,29 @@ type PerformanceData = {
     label: string
 }
 
-export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId:string, mesoId:string}){
+export function useSession({sessionId, weekId, mesoId, weeknumber}:{sessionId:string, weekId:string, mesoId:string, weeknumber:string}){
     const [isLoading, setIsLoading] = useState(true)
     const [sessionName, setSessionName] = useState("")
     const [addexercise, setAddexercise] = useState<SessionExerciseDraft[]>([])
     const [weeklySetSummarySeed, setWeeklySetSummarySeed] = useState<SessionWeeklySetSummarySeed[]>([])
     const [apiCall, setApiCall] = useState(new Set());
         const MUSCLE_COLORS = {
-        "legs": "#4ade80", "glutes": "#4ade80",
-        "calves": "#4ade80", "abductors": "#4ade80", "chest": "#60a5fa",
-        "traps": "#a78bfa", "rear delts": "#a78bfa", "front delts": "#a78bfa","side delts": "#f59e0b", "biceps": "#f59e0b", "triceps": "#f87171","forearms": "#f87171", "abs": "#f87171"};
+        "back": "#60a5fa", "chest": "#60a5fa", "legs": "#4ade80",
+        "biceps": "#f59e0b", "triceps": "#f87171", "hamstrings": "#4ade80",
+        "abs": "#f87171", "front delts": "#a78bfa", "side delts": "#f59e0b",
+        "rear delts": "#a78bfa", "glutes": "#4ade80", "calves": "#4ade80"
+    };
     useEffect(()=>{
         getSessionname()
     },[])
+
+    useEffect(()=>{
+        
+        if (isLoading === false) {
+            localStorage.setItem(`sessionDraft ${sessionId}`, JSON.stringify(addexercise))
+        }
+    }, [addexercise, isLoading]) 
+
 
     async function getSessionname(){
         setIsLoading(true)
@@ -40,8 +50,11 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
             const data = await res.json()
             setSessionName(data.session_name)
             setWeeklySetSummarySeed(data.weeklySetSummarySeed ?? [])
-            const result: SessionExerciseDraft[] = data.eachexercise.map((exercise: any, index: number)=>{
-                
+            let check = localStorage.getItem(`sessionDraft ${sessionId}`)
+            if(check){
+                setAddexercise(JSON.parse(check))
+            }else{
+                const result: SessionExerciseDraft[] = data.eachexercise.map((exercise: any, index: number)=>{
                 return {
                     ...exercise, 
                     id: index+1, 
@@ -60,9 +73,12 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
                 }
             })
             setAddexercise(result)
+            }
+            
         } finally {
             setIsLoading(false)
         }
+        
     }
 
     function Addexercise(){
@@ -77,47 +93,49 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
         ])
     }
 
-    async function Selecttrainedmuscle(id?:number, musclename?:string){
+    function Selecttrainedmuscle(id?:number, musclename?:string){
         if (!musclename) {
-            const newaddexercise = addexercise.map((exercise: any) => {
+            setAddexercise((prev) => prev.map((exercise: any) => {
                 if (exercise.id === id) {
                     const { soreness, performance, ...rest } = exercise as any;
                     return { ...rest, muscletrained: "" };
                 }
                 return exercise;
-            });
-            setAddexercise(newaddexercise);
+            }));
             return;
         }
 
         const isMultiple = addexercise.some((ex) => ex.id !== id && ex.muscletrained === musclename);
 
-        let showFeedback = false;
-        if (!isMultiple) {
-            try {
-                const result = await Get(`/mesoCycle/frequency/muscle?muscleName=${encodeURIComponent(musclename)}&weekId=${weekId}&mesoId=${mesoId}`);
-                if (!result.ok) {
-                    throw new Error(`Failed to fetch frequency muscle: ${result.status}`)
-                }
-                const data = await result.json();
-                showFeedback = data.showSorenessFeedback;
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        const newaddexercise = addexercise.map((exercise: any) => {
+        // Optimistically update the UI immediately
+        setAddexercise((prev) => prev.map((exercise: any) => {
             if (exercise.id === id) {
-                if (showFeedback) {
-                    return { ...exercise, muscletrained: musclename, soreness: null, performance: null };
-                } else {
-                    const { soreness, performance, ...rest } = exercise as any;
-                    return { ...rest, muscletrained: musclename };
-                }
+                const { soreness, performance, ...rest } = exercise as any;
+                return { ...rest, muscletrained: musclename };
             }
             return exercise;
-        });
-        setAddexercise(newaddexercise);
+        }));
+
+        if (!isMultiple) {
+            // Fetch feedback requirement asynchronously without blocking the UI
+            Get(`/mesoCycle/frequency/muscle?muscleName=${encodeURIComponent(musclename)}&weekId=${weekId}&mesoId=${mesoId}`)
+                .then(async (result) => {
+                    if (!result.ok) {
+                        throw new Error(`Failed to fetch frequency muscle: ${result.status}`);
+                    }
+                    const data = await result.json();
+                    if (data.showSorenessFeedback) {
+                        setAddexercise((prev) => prev.map((exercise: any) => {
+                            // Only update if the muscle hasn't been changed again while fetching
+                            if (exercise.id === id && exercise.muscletrained === musclename) {
+                                return { ...exercise, soreness: null, performance: weeknumber === "1" ? {score:2}: null };
+                            }
+                            return exercise;
+                        }));
+                    }
+                })
+                .catch((e) => console.error(e));
+        }
     }
 
     async function submitSession(){
@@ -129,7 +147,7 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
         if (!result.ok) {
             throw new Error(`Failed to save session: ${result.status}`)
         }
-
+        localStorage.removeItem(`sessionDraft ${sessionId}`)
         return result.json()
     }
 
@@ -155,11 +173,11 @@ export function useSession({sessionId, weekId, mesoId}:{sessionId:string, weekId
     function addsetData(e: any, exerciseid: number, id:number) {
         const { name, value } = e.target;
         
-        const result = addexercise.map(exercise => //{"id", "exercisename", "sets":[{}, {}, {}]}
-            exercise.id === exerciseid //How to do you access the keys of an object ??
+        const result = addexercise.map(exercise => 
+            exercise.id === exerciseid 
             ? {
-                ...exercise,   //expand the exercise object 
-                set: exercise.set.map(set =>  //How do you go through an array of object ?? here ===> set = {"id", "reps", "weight", "rir"}
+                ...exercise,   
+                set: exercise.set.map(set => 
                     set.id === id ? { ...set, [name]: value } : set
                 )
                 }

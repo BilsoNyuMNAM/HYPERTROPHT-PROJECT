@@ -12,7 +12,6 @@ type DimmerProps = {
 }
 
 export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSession, onBackToSession, onRatePerformance }: DimmerProps){
-    // showDarkbackground is ONLY set to true after a successful backend response
     const [showDarkbackground, setshowDarkbackground] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [isSaving, setIsSaving] = useState(false)
@@ -94,7 +93,7 @@ export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSes
                             {
                                 isSaving ? (
                                     <>
-                                        <div className="h-8 w-8 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
+                                        <div className="h-8 w-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
                                         <p className="text-white font-spaceMono text-sm">Saving session...</p>
                                     </>
                                 ) : saveError ? (
@@ -107,7 +106,7 @@ export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSes
                                                     .then(() => setshowDarkbackground(true))
                                                     .catch(() => {})
                                             }}
-                                            className="mt-1 px-4 py-2 border border-[#2a2a2a] rounded-lg text-xs font-spaceMono cursor-pointer hover:border-[#f97316] hover:text-[#f97316] transition-colors"
+                                            className="mt-1 px-4 py-2 border border-[#2a2a2a] rounded-lg text-xs cursor-pointer hover:border-white hover:text-white transition-colors" style={{ fontFamily: "inherit" }}
                                         >
                                             Retry Save
                                         </button>
@@ -115,7 +114,7 @@ export default function Dimmer({ setShowDimmer, musclesForPerformance, onSaveSes
                                 ) : (
                                     // Brief initialising state before useEffect kicks in
                                     <>
-                                        <div className="h-8 w-8 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
+                                        <div className="h-8 w-8 rounded-full border-2 border-white border-t-transparent animate-spin" />
                                         <p className="text-white font-spaceMono text-sm">Preparing session...</p>
                                     </>
                                 )

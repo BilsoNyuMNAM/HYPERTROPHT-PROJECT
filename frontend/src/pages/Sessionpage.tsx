@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useLocation } from "react-router-dom"
 import { useState, useMemo } from "react"
-
+import { useSearchParams } from "react-router-dom"
 import Dimmer from "../components/Dimmer"
 import { useSession } from "../hooks/useSession"
 import Exercisecomponent from "./Exercisecomponent"
@@ -14,7 +14,7 @@ type set = {
     rir:string
 }
 
-const muscle= ["back","chest","legs", "biceps","triceps","hamstrings","abs","front delts","side delts","rear delts","glutes","calves"]
+// The muscle list is now derived dynamically inside the component.
 
 export default function Sessionpage(){
     const {sessionId}= useParams()
@@ -22,16 +22,25 @@ export default function Sessionpage(){
     const navigate = useNavigate()
     const [showDimmer, setShowDimmer] = useState(false)
     const { weekId, mesoId } = (location.state as { weekId?: string; mesoId?: string }) || {}
-     
+    const [searchParams] = useSearchParams();
+    const weeknumber = searchParams.get("weeknumber") || ""
 
-    function validateSession(exercise:any):boolean {
-        const hasEmpty = exercise.some(ex =>{
-            return ex.exercise_name.trim() === "" || ex.muscletrained.trim() === "" || ex.set.some(set=>{
+    function validateSession(exercise: any): string | null {
+    if (exercise.length === 0) { // trigger if there is no exercise added 
+        return "Please add at least one exercise"  
+    }
+    //trigger if there is any empty field in the exercise or set
+        const hasEmpty = exercise.some(ex => {
+            return ex.exercise_name.trim() === "" || ex.muscletrained.trim() === "" || ex.set.some(set => {
                 return set.reps === "" || set.weight === "" || set.rir === ""
-
             })
         })
-        return !hasEmpty 
+
+    if (hasEmpty) { //if  there is an empty field in the exerise, return this 
+        return "Please fill in all fields"  
+    }
+
+    return null  // else do nothing and return null
     }
     
     if (!weekId || !mesoId || !sessionId) {
@@ -39,7 +48,7 @@ export default function Sessionpage(){
         return null
     }
     
-    const {isLoading, Addexercise,MUSCLE_COLORS,  addexercise, persistableExercises, Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, submitSession, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData, weeklySetSummary, weeklySetSummarySeed} = useSession({sessionId, weekId, mesoId})
+    const {isLoading, Addexercise, MUSCLE_COLORS, addexercise, persistableExercises, Selecttrainedmuscle, exerciseName, addsetData, addSet, deleteSet, deleteExercise, sessionName, submitSession, apiCall, setApiCall, logSoreness, logPerformanceByMuscle, refreshSessionData, weeklySetSummary, weeklySetSummarySeed} = useSession({sessionId, weekId, mesoId, weeknumber})
     
     function calculateSetsLeftForMuscle(muscletrained: string): number | null {
         const muscleSummary = weeklySetSummary.find(row => row.muscleName === muscletrained)
@@ -47,36 +56,20 @@ export default function Sessionpage(){
         return muscleSummary.setsLeft
     }
 
-    /**
-     * Returns the number of sets still available for a given muscle this week,
-     * accounting for all other sessions and all other exercises in this session.
-     * Returns null when the muscle has no programmed weekly target.
-     *
-     * Used by Exercisecomponent to validate a muscle selection BEFORE the
-     * current exercise's sets are counted towards that muscle.
-     */
     function getMuscleSetsLeft(muscleName: string): number | null {
         const normalizedName = muscleName.trim().toLowerCase()
-
-        // Case 1: muscle is already tracked in the session draft (via another exercise).
-        // Its setsLeft does NOT include the current exercise because that exercise
-        // has either no muscle or a different muscle assigned.
         const summaryRow = weeklySetSummary.find(
             row => row.muscleName.trim().toLowerCase() === normalizedName
         )
         if (summaryRow) {
             return summaryRow.hasTarget ? summaryRow.setsLeft : null
         }
-
-        // Case 2: muscle exists in the weekly seed but isn't trained yet this session.
         const seedRow = weeklySetSummarySeed.find(
             row => row.muscleName.trim().toLowerCase() === normalizedName
         )
         if (seedRow) {
             return seedRow.targetSets - seedRow.completedSetsOutsideSession
         }
-
-        // Case 3: no weekly target programmed for this muscle.
         return null
     }
     
@@ -84,8 +77,6 @@ export default function Sessionpage(){
     const [currentDropdown, setCurrentDropdown] = useState<number | null>(null);    
     const [isOpen, setOpen]= useState(false)
 
-
-    //todo: put inside a memoization 
     const sorenessFeedbackMuscles = useMemo(() => {
     return Array.from(
         new Set(
@@ -94,7 +85,8 @@ export default function Sessionpage(){
                     return (
                         typeof exercise?.muscletrained === "string" &&
                         exercise.muscletrained.trim() !== "" &&
-                        Object.prototype.hasOwnProperty.call(exercise, "soreness")
+                        Object.prototype.hasOwnProperty.call(exercise, "soreness") && !exercise.performance
+                        
                     )
                 })
                 .map((exercise) => exercise.muscletrained)
@@ -102,84 +94,228 @@ export default function Sessionpage(){
     )
     }, [persistableExercises])
     
- 
+
+    const activeMuscles = useMemo(() => {
+        // Find all muscles from the seed that have a targetSets > 0
+        const seedMuscles = weeklySetSummarySeed
+            .filter((seed) => seed.targetSets > 0)
+            .map((seed) => seed.muscleName.toLowerCase());
+
+        // We still check against MUSCLE_COLORS to ensure we have the color mapping
+        return Object.keys(MUSCLE_COLORS).filter((muscle) => 
+            seedMuscles.includes(muscle.toLowerCase())
+        );
+    }, [weeklySetSummarySeed, MUSCLE_COLORS]);
+
     return(
         <>
         {isLoading ? (
-            <div className="w-full min-h-screen bg-black text-white flex items-center justify-center">
-                <Spinner className="w-8 h-8 text-[#c8ff00]" />
+            <div
+                className="w-full min-h-screen flex items-center justify-center"
+                style={{ backgroundColor: "#0f0f0f" }}
+            >
+                <Spinner className="w-8 h-8 text-white" />
             </div>
         ) : (
-           <div className="h-screen w-full bg-black text-white overflow-y-auto">
-                <div className="w-full h-screen max-w-5xl mx-auto mt-7 ">
-                    <div className="px-8 py-6">
-                     <div className="mb-10">
-                        <button onClick={()=>{validateSession(addexercise)? navigate(-1):alert("Please fill in all exercise details before going back to the session.")}}className="cursor-pointer font-spaceMono">← Back to Session</button>
-                    </div>
-                    <div className="mb-10 flex justify-between items-center">
-                        
-                        <p className="h-10 w-full text-xl font-spaceMono uppercase">{sessionName}</p>
-                        <div className="p-2">
+            <div
+                className="h-screen w-full overflow-y-auto"
+                style={{
+                    backgroundColor: "#0f0f0f",
+                    color: "#ffffff",
+                    fontFamily: "'Inter', 'Geist', system-ui, sans-serif",
+                }}
+            >
+                <div className="w-full max-w-4xl mx-auto">
+
+                   
+                    <nav
+                        className="flex items-center px-10 py-6"
+                        style={{ borderBottom: "1px solid #1e1e1e" }}
+                    >
+                        <button
+                            onClick={() => {
+                                navigate(-1) // go back to the previous page which is the week page 
+                                    
+                            }}
+                            className="flex items-center gap-1.5 transition-colors"
+                            style={{
+                                fontSize: "12px",
+                                letterSpacing: "0.05em",
+                                color: "#6b7280",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 0,
+                                fontFamily: "inherit",
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = "#a1a1aa")}
+                            onMouseLeave={e => (e.currentTarget.style.color = "#6b7280")}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Back to Session
+                        </button>
+                    </nav>
+
+                    <div className="px-10 pt-10 pb-8">
+                        <p
+                            style={{
+                                fontSize: "11px",
+                                letterSpacing: "0.12em",
+                                color: "#6b7280",
+                                textTransform: "uppercase",
+                                marginBottom: "8px",
+                            }}
+                        >
+                            Session
+                        </p>
+                        <div className="flex items-start justify-between gap-4">
+                            <h1
+                                style={{
+                                    fontSize: "clamp(1.8rem, 5vw, 2.8rem)",
+                                    fontWeight: 700,
+                                    lineHeight: 1.1,
+                                    color: "#ffffff",
+                                    letterSpacing: "-0.02em",
+                                }}
+                            >
+                                {sessionName}
+                            </h1>
                             <button
-                                className="cursor-pointer font-mono text-[13px] tracking-[0.06em] text-[#f0f0f0] bg-transparent border border-[#2a2a2a] rounded-[8px] px-5 py-[10px] leading-[1.4] text-center transition-all duration-200 hover:border-[#f97316] hover:text-[#f97316] hover:bg-[rgba(249,115,22,0.15)]"
                                 onClick={() => {
-                                    validateSession(addexercise)?setShowDimmer(true):alert("Please fill in all exercise details before saving the session.")    
-                                }}>
-                                Save<br/>Session
+                                    const error = validateSession(addexercise)
+                                        if (error) {
+                                            alert(error)          
+                                        } else {
+                                            setShowDimmer(true)  
+                                        }
+                                }}
+                                style={{
+                                    flexShrink: 0,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    backgroundColor: "#ffffff",
+                                    color: "#000000",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    padding: "10px 20px",
+                                    fontSize: "13px",
+                                    fontWeight: 500,
+                                    letterSpacing: "0.02em",
+                                    cursor: "pointer",
+                                    height: "40px",
+                                    fontFamily: "inherit",
+                                    transition: "opacity 0.15s",
+                                    marginTop: "6px",
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+                                onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                            >
+                                Save Session
                             </button>
-                        </div>  
-                        
+                        </div>
                     </div>
 
-                    <div >
+                    
+                    <div style={{ height: "1px", backgroundColor: "#1e1e1e", margin: "0 40px" }} />
+
+                  
+                    <div className="px-10 py-8" style={{ paddingBottom: "80px" }}>
+
+                       
                         {weeklySetSummary.length > 0 ? (
-                            <div className="mb-8 rounded-[12px] border border-[#1f1f1f] bg-[#0b0b0b] p-5">
-                                <div className="mb-4 flex items-center justify-between gap-3">
-                                    <p className="font-spaceMono text-[11px] tracking-[0.16em] text-[#7b7b7b] uppercase">
+                            <div
+                                style={{
+                                    marginBottom: "32px",
+                                    borderRadius: "12px",
+                                    border: "1px solid #2a2a2a",
+                                    backgroundColor: "#1a1a1a",
+                                    padding: "20px",
+                                }}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <p
+                                        style={{
+                                            fontSize: "11px",
+                                            letterSpacing: "0.12em",
+                                            textTransform: "uppercase",
+                                            color: "#6b7280",
+                                            fontWeight: 500,
+                                        }}
+                                    >
                                         Weekly Sets Left
                                     </p>
-                                    <p className="font-spaceMono text-[10px] text-[#515151] uppercase tracking-[0.08em]">
+                                    <p
+                                        style={{
+                                            fontSize: "10px",
+                                            letterSpacing: "0.08em",
+                                            textTransform: "uppercase",
+                                            color: "#3f3f46",
+                                        }}
+                                    >
                                         Current session included
                                     </p>
                                 </div>
 
-                                <div className="space-y-3">
+                                <div className="flex flex-wrap gap-2">
                                     {weeklySetSummary.map((summary) => {
                                         const isOverTarget = summary.hasTarget && summary.setsLeft < 0
                                         return (
                                             <div
                                                 key={summary.muscleName}
-                                                className={`rounded-[10px] border px-4 py-3 ${
-                                                    isOverTarget
-                                                        ? 'border-orange-500/30 bg-orange-500/5'
-                                                        : 'border-[#191919] bg-black/40'
-                                                }`}
+                                                style={{
+                                                    borderRadius: "8px",
+                                                    border: isOverTarget
+                                                        ? "1px solid rgba(249,115,22,0.35)"
+                                                        : "1px solid #2a2a2a",
+                                                    backgroundColor: isOverTarget
+                                                        ? "rgba(249,115,22,0.06)"
+                                                        : "#111111",
+                                                    padding: "10px 14px",
+                                                    minWidth: "110px",
+                                                }}
                                             >
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="font-spaceMono text-sm uppercase">
-                                                        {summary.muscleName}
-                                                    </span>
-                                                    {summary.hasTarget ? (
-                                                        <span className={`font-spaceMono text-sm uppercase ${
-                                                            isOverTarget ? 'text-orange-400' : 'text-[#c8ff00]'
-                                                        }`}>
-                                                            {isOverTarget
-                                                                ? `${Math.abs(summary.setsLeft)} over`
-                                                                : `${summary.setsLeft} left`
-                                                            }
-                                                        </span>
-                                                    ) : (
-                                                        <span className="font-spaceMono text-sm text-[#555] uppercase">no limit</span>
-                                                    )}
-                                                </div>
-                                                {summary.hasTarget && (
-                                                    <p className="mt-2 font-spaceMono text-[10px] tracking-[0.08em] text-[#7b7b7b] uppercase">
-                                                        {summary.completedSets}/{summary.targetSets} weekly sets counted
+                                                <p
+                                                    style={{
+                                                        fontSize: "10px",
+                                                        letterSpacing: "0.08em",
+                                                        textTransform: "uppercase",
+                                                        color: "#6b7280",
+                                                        marginBottom: "4px",
+                                                    }}
+                                                >
+                                                    {summary.muscleName}
+                                                </p>
+                                                {summary.hasTarget ? (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "14px",
+                                                            fontWeight: 600,
+                                                            color: isOverTarget ? "#fb923c" : "#ffffff",
+                                                        }}
+                                                    >
+                                                        {isOverTarget
+                                                            ? `${Math.abs(summary.setsLeft)} over`
+                                                            : `${summary.setsLeft} left`}
+                                                    </p>
+                                                ) : (
+                                                    <p style={{ fontSize: "12px", color: "#3f3f46" }}>
+                                                        no limit
                                                     </p>
                                                 )}
-                                                <p className="mt-1 font-spaceMono text-[10px] text-[#555] uppercase tracking-[0.08em]">
-                                                    Current session: {summary.currentSessionSets} sets
-                                                </p>
+                                                {summary.hasTarget && (
+                                                    <p
+                                                        style={{
+                                                            fontSize: "10px",
+                                                            color: "#3f3f46",
+                                                            marginTop: "2px",
+                                                        }}
+                                                    >
+                                                        {summary.completedSets}/{summary.targetSets} sets
+                                                    </p>
+                                                )}
                                             </div>
                                         )
                                     })}
@@ -187,33 +323,103 @@ export default function Sessionpage(){
                             </div>
                         ) : null}
 
-                        {
-                            addexercise.length === 0? <p>Start adding exercise</p>:addexercise.map((exercise)=>{
-                                //@ts-ignore
-                                 return <Exercisecomponent key={exercise.id} setsLeft={calculateSetsLeftForMuscle(exercise.muscletrained)} logSoreness={logSoreness} muscletrained={exercise.muscletrained} MUSCLE_COLORS={MUSCLE_COLORS} muscle={muscle} currentDropdown={currentDropdown} setCurrentDropdown={setCurrentDropdown} isOpen={isOpen} setOpen={setOpen} exercise_name={exercise.exercise_name} id={exercise.id} exerciseName={exerciseName} addset={addSet} deleteSet={deleteSet} deleteExercise={deleteExercise} set={exercise.set} addsetData={addsetData} Selecttrainedmuscle={Selecttrainedmuscle} apiCall={apiCall} setApiCall={setApiCall} weekId={weekId} mesoId={mesoId} existingSoreness={exercise.soreness} getMuscleSetsLeft={getMuscleSetsLeft}/>
-                            })
-                        }
                         
-                    </div>
-                    <div>
-                        <button className="cursor-pointer" onClick={()=>{Addexercise()}}>+ ADD EXERCISE </button>
-                       
+                        <div>
+                            {addexercise.length === 0 ? (
+                                <div
+                                    style={{
+                                        padding: "40px 24px",
+                                        textAlign: "center",
+                                        color: "#3f3f46",
+                                        fontSize: "14px",
+                                    }}
+                                >
+                                    No exercises yet — add your first one below
+                                </div>
+                            ) : (
+                                addexercise.map((exercise) => (
+                                    //@ts-ignore
+                                    <Exercisecomponent
+                                        key={exercise.id}
+                                        setsLeft={calculateSetsLeftForMuscle(exercise.muscletrained)}
+                                        logSoreness={logSoreness}
+                                        muscletrained={exercise.muscletrained}
+                                        MUSCLE_COLORS={MUSCLE_COLORS}
+                                        muscle={activeMuscles}
+                                        currentDropdown={currentDropdown}
+                                        setCurrentDropdown={setCurrentDropdown}
+                                        isOpen={isOpen}
+                                        setOpen={setOpen}
+                                        exercise_name={exercise.exercise_name}
+                                        id={exercise.id}
+                                        exerciseName={exerciseName}
+                                        addset={addSet}
+                                        deleteSet={deleteSet}
+                                        deleteExercise={deleteExercise}
+                                        set={exercise.set}
+                                        addsetData={addsetData}
+                                        Selecttrainedmuscle={Selecttrainedmuscle}
+                                        apiCall={apiCall}
+                                        setApiCall={setApiCall}
+                                        weekId={weekId}
+                                        mesoId={mesoId}
+                                        existingSoreness={exercise.soreness}
+                                        getMuscleSetsLeft={getMuscleSetsLeft}
+                                    />
+                                ))
+                            )}
+                        </div>
+
+                        
+                        <button
+                            onClick={() => { Addexercise() }}
+                            style={{
+                                marginTop: "16px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                backgroundColor: "#1a1a1a",
+                                color: "#a1a1aa",
+                                border: "1px solid #2a2a2a",
+                                borderRadius: "8px",
+                                padding: "10px 18px",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                letterSpacing: "0.05em",
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                                transition: "color 0.15s, border-color 0.15s",
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.color = "#ffffff"
+                                e.currentTarget.style.borderColor = "#3f3f46"
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.color = "#a1a1aa"
+                                e.currentTarget.style.borderColor = "#2a2a2a"
+                            }}
+                        >
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                            Add Exercise
+                        </button>
                     </div>
                 </div>
+
+                {showDimmer ? (
+                    <Dimmer
+                        setShowDimmer={setShowDimmer}
+                        musclesForPerformance={sorenessFeedbackMuscles}
+                        onRatePerformance={logPerformanceByMuscle}
+                        onSaveSession={submitSession}
+                        onBackToSession={async () => {
+                            await refreshSessionData()
+                            setShowDimmer(false)
+                        }}
+                    />
+                ) : null}
             </div>
-            {
-                showDimmer ? <Dimmer
-                    setShowDimmer={setShowDimmer}
-                    musclesForPerformance={sorenessFeedbackMuscles}
-                    onRatePerformance={logPerformanceByMuscle}
-                    onSaveSession={submitSession}
-                    onBackToSession={async () => {
-                        await refreshSessionData()
-                        setShowDimmer(false)
-                    }}
-                /> : null
-            }
-        </div>
         )}
         </>
     )

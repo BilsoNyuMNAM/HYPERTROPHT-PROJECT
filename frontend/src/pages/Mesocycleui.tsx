@@ -1,7 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom"
-import {useState } from "react"
+
+import {useState, useRef} from "react"
 import { useQuery } from "@tanstack/react-query"
 import VolumeOverview from "../components/Volumeoverview"
+import MuscleManager from "../components/MuscleManager"
 import { Get, Post } from "../service/centralisedApi.js"
 import { Spinner } from "../components/ui/spinner"
 
@@ -19,7 +21,6 @@ export default function Mesocycleui() {
         }
     })
 
-
     const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null)
     const [selectedWeekNumber, setSelectedWeekNumber] = useState<number | null>(null)
     const [selectedWeekIsFinal, setSelectedWeekIsFinal] = useState(false)
@@ -27,16 +28,20 @@ export default function Mesocycleui() {
     const [isResetting, setIsResetting] = useState(false)
     const [calculateMessage, setCalculateMessage] = useState("")
     const [calculateErrors, setCalculateErrors] = useState<string[]>([])
-
+    const [showMuscleManager, setShowMuscleManager] = useState(false)
+    const loading = useRef(false)
 
     async function handleCalculateNextWeek() {
-        if (!selectedWeekId || selectedWeekIsFinal || isCalculating) return
+        if(loading.current) return
+        loading.current = true
+        if (!selectedWeekId || selectedWeekIsFinal) return
 
         setIsCalculating(true)
         setCalculateMessage("")
         setCalculateErrors([])
 
         try {
+            
             const response = await Post(
                 `/mesoCycle/week/calculate-next/${selectedWeekId}`
             )
@@ -58,12 +63,14 @@ export default function Mesocycleui() {
             setCalculateMessage("Failed to calculate next week volume.")
         } finally {
             setIsCalculating(false)
+            loading.current = false
+           
         }
     }
 
     async function handleResetFromSelectedWeek() {
-        if (!selectedWeekId || isResetting || selectedWeekNumber === 1) return
-
+        if (!selectedWeekId || isResetting || selectedWeekNumber === 1) return 
+        
         setIsResetting(true)
         setCalculateMessage("")
         setCalculateErrors([])
@@ -255,22 +262,22 @@ export default function Mesocycleui() {
                                     <button
                                         type="button"
                                         onClick={handleCalculateNextWeek}
-                                        disabled={selectedWeekIsFinal || isCalculating || !selectedWeekId}
+                                        disabled={selectedWeekIsFinal || isCalculating || !selectedWeekId || loading.current}
                                         style={{
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-                                            backgroundColor: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "#2a2a2a" : "#ffffff",
-                                            color: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "#6b7280" : "#000000",
+                                            backgroundColor: selectedWeekIsFinal || isCalculating || !selectedWeekId || loading.current ? "#2a2a2a" : "#ffffff",
+                                            color: selectedWeekIsFinal || isCalculating || !selectedWeekId || loading.current ? "#6b7280" : "#000000",
                                             border: "none",
                                             borderRadius: "8px",
                                             padding: "10px 18px",
                                             fontSize: "12px",
                                             fontWeight: 500,
                                             letterSpacing: "0.04em",
-                                            cursor: selectedWeekIsFinal || isCalculating || !selectedWeekId ? "not-allowed" : "pointer",
+                                            cursor: selectedWeekIsFinal || isCalculating || !selectedWeekId || loading.current ? "not-allowed" : "pointer",
                                             transition: "opacity 0.15s",
-                                            opacity: selectedWeekIsFinal || isCalculating || !selectedWeekId ? 0.45 : 1,
+                                            opacity: selectedWeekIsFinal || isCalculating || !selectedWeekId || loading.current ? 0.45 : 1,
                                             height: "40px",
                                             fontFamily: "inherit",
                                         }}
@@ -306,6 +313,30 @@ export default function Mesocycleui() {
                                         }}
                                     >
                                         {isResetting ? "Resetting..." : "Reset from Selected Week"}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMuscleManager(true)}
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            backgroundColor: "#1a1a1a",
+                                            color: "#ffffff",
+                                            border: "1px solid #2a2a2a",
+                                            borderRadius: "8px",
+                                            padding: "10px 18px",
+                                            fontSize: "12px",
+                                            fontWeight: 500,
+                                            letterSpacing: "0.04em",
+                                            cursor: "pointer",
+                                            transition: "opacity 0.15s",
+                                            height: "40px",
+                                            fontFamily: "inherit",
+                                        }}
+                                    >
+                                        Manage Muscles
                                     </button>
                                 </div>
 
@@ -355,6 +386,13 @@ export default function Mesocycleui() {
                                     }}
                                 />
                             </div>
+
+                            {showMuscleManager && selectedWeekId && (
+                                <MuscleManager
+                                    weekId={selectedWeekId.toString()}
+                                    onClose={() => setShowMuscleManager(false)}
+                                />
+                            )}
 
                         </div>
                     </div>

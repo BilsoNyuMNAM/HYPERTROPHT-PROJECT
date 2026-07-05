@@ -56,10 +56,11 @@ export default function Performance({ muscles = [], onConfirm, onRate, isSaving 
                     <span className="text-white font-bold font-bebas">Session Complete</span>
                     <span className="text-gray-400 font-spaceMono text-xs">No soreness feedback muscle needs performance rating.</span>
                 </div>
-                <div className="p-4 bg-[#f97316] rounded-lg mt-3 text-center">
+                <div style={{ backgroundColor: "#ffffff", borderRadius: "8px", marginTop: "12px", textAlign: "center", padding: "12px 16px" }}>
                     <button
                         onClick={onConfirm}
                         className="font-spaceMono text-sm cursor-pointer"
+                        style={{ color: "#000000", fontFamily: "inherit", fontWeight: 500 }}
                     >
                         {isSaving ? "SAVING SESSION..." : "CONFIRM AND SAVE SESSION"}
                     </button>
@@ -85,7 +86,7 @@ export default function Performance({ muscles = [], onConfirm, onRate, isSaving 
 
                         return (
                             <div key={muscleName} className="border border-[#2a2a2a] rounded-xl p-3">
-                                <p className="text-[rgb(245,160,48)] font-bold mb-3 text-sm font-spaceMono">
+                                <p style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#6b7280", fontWeight: 500, marginBottom: "10px", fontFamily: "inherit" }}>
                                     {muscleName.toUpperCase()}-PERFORMANCE
                                 </p>
 
@@ -143,11 +144,11 @@ export default function Performance({ muscles = [], onConfirm, onRate, isSaving 
                 <p className="text-[11px] text-gray-400 font-spaceMono mb-2">
                     {ratedCount}/{musclesToRate.length} muscles rated
                 </p>
-                <div className="p-4 bg-[#f97316] rounded-lg text-center">
+                <div style={{ backgroundColor: "#ffffff", borderRadius: "8px", textAlign: "center", padding: "12px 16px" }}>
                     <button
                         onClick={onConfirm}
                         disabled={!allRated || isSaving}
-                        className="font-spaceMono text-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ color: "#000000", fontFamily: "inherit", fontWeight: 500, fontSize: "13px", cursor: allRated && !isSaving ? "pointer" : "not-allowed", opacity: !allRated || isSaving ? 0.45 : 1 }}
                     >
                         {isSaving ? "SAVING SESSION..." : "CONFIRM AND SAVE SESSION"}
                     </button>

@@ -85,6 +85,7 @@ export async function validateWeekForProgression(
     where: { id: weekId, deletedAt: null },
     select: {
       id: true,
+      week_name: true,
       mesocycleId: true,
       session: {
         where: {
@@ -172,6 +173,28 @@ export async function validateWeekForProgression(
 
   const issues: ValidationIssue[] = [];
 
+  // Find muscles trained in other weeks of this mesocycle (not the current week)
+  const previouslyTrainedMuscles = new Set(
+    (await prisma.exerciselog.findMany({
+      where: {
+        deletedAt: null,
+        session: {
+          deletedAt: null,
+          week: {
+            mesocycleId: week.mesocycleId,
+            deletedAt: null,
+            id: { not: weekId },
+          },
+        },
+      },
+      select: {
+        exercise: {
+          select: { muscleId: true },
+        },
+      },
+    })).map((log: { exercise: { muscleId: number } }) => log.exercise.muscleId)
+  );
+
   if (week.session.length === 0) {
     issues.push({
       code: "NO_SESSIONS",
@@ -195,6 +218,7 @@ export async function validateWeekForProgression(
 
   week.startingvolume.forEach(
     (planned: { muscleId: number; set: number; muscle: { muscle_name: string } }) => {
+      if (planned.set === 0) return;
       const completed = completedVolumeByMuscle.get(planned.muscleId) || 0;
       if (completed < planned.set) {
         issues.push({
@@ -267,7 +291,7 @@ export async function validateWeekForProgression(
       }
 
       const feedbackRequired =
-        currentOccurrence > 1 && currentOccurrence <= configuredFrequency;
+        configuredFrequency > 0 && currentOccurrence <= configuredFrequency && (previouslyTrainedMuscles.has(muscleId) || currentOccurrence > 1);
 
       if (!feedbackRequired) {
         return;
@@ -376,6 +400,28 @@ export async function calculateNextWeekVolumes(
     throw new Error("FINAL_WEEK");
   }
 
+  // Find muscles trained in other weeks of this mesocycle (not the current week)
+  const previouslyTrainedMuscles = new Set(
+    (await prisma.exerciselog.findMany({
+      where: {
+        deletedAt: null,
+        session: {
+          deletedAt: null,
+          week: {
+            mesocycleId: week.mesocycleId,
+            deletedAt: null,
+            id: { not: week.id },
+          },
+        },
+      },
+      select: {
+        exercise: {
+          select: { muscleId: true },
+        },
+      },
+    })).map((log: { exercise: { muscleId: number } }) => log.exercise.muscleId)
+  );
+
   const muscleOccurrence = new Map<number, number>();
   const scoresByMuscle = new Map<number, number[]>();
 
@@ -390,8 +436,7 @@ export async function calculateNextWeekVolumes(
       const occurrence = (muscleOccurrence.get(muscleId) || 0) + 1;
       muscleOccurrence.set(muscleId, occurrence);
 
-      // Session 1 is always excluded for each muscle.
-      if (occurrence === 1) {
+      if (occurrence === 1 && !previouslyTrainedMuscles.has(muscleId)) {
         return;
       }
 
@@ -413,10 +458,24 @@ export async function calculateNextWeekVolumes(
 
   const calculatedVolumes = week.startingvolume.map(
     (row: { muscleId: number; set: number }) => {
+    // If the muscle was deactivated this week (set < 0), its base is the positive magnitude.
+    // If it was active, it's already positive.
+    // We treat 0 as 2 for safety.
+    const baseVolume = row.set === 0 ? 2 : Math.abs(row.set);
+    
     const collectedScores = scoresByMuscle.get(row.muscleId) || [];
-    // If no score exists for a muscle this week, keep volume unchanged.
-    const maxScore = collectedScores.length ? Math.max(...collectedScores) : 3;
-    const nextSetCount = calculateNextSetCount(row.set, maxScore);
+    
+    // If no score exists for a muscle this week, keep the base volume unchanged.
+    // If scores do exist (e.g. they trained it then deactivated it), apply the algorithm.
+    if (collectedScores.length === 0) {
+      return {
+        muscleId: row.muscleId,
+        set: baseVolume,
+      };
+    }
+    
+    const maxScore = Math.max(...collectedScores);
+    const nextSetCount = calculateNextSetCount(baseVolume, maxScore);
 
     return {
       muscleId: row.muscleId,

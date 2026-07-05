@@ -1,4 +1,4 @@
-
+ 
 
 async function baseRequest({endpoint, method, data}){
     return await fetch(`${import.meta.env.VITE_API_URL}${endpoint}`, {

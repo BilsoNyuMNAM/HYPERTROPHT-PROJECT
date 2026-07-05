@@ -39,6 +39,10 @@ export default function Signup() {
         setIsLoading(false)
         navigate("/Allmesocycle")
       }
+      else{
+        window.alert(responseData.error || "Signup failed. Please try again.")
+        setIsLoading(false)
+      }
     }
     catch(error){
       window.alert("Signup failed. Please try again.")

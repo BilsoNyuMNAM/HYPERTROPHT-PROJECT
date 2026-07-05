@@ -1,4 +1,4 @@
-import { PrismaTransaction, ExerciseData } from "./types";
+ import { PrismaTransaction, ExerciseData } from "./types";
 import { getMuscleId, upsertExercise } from "./exerciseService";
 import { upsertExerciseLog } from "./setService";
 import { saveMuscleFeedback } from "./feedbackService";
