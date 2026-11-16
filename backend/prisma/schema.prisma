@@ -1,150 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
-  runtime  = "cloudflare"
+  importFileExtension = "js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model User{
+model exercise {
+  id            Int    @id @default(autoincrement())
+  name          String @unique
+  muscleGroupId Int
+  sessionexercises sessionexercise[]
+}
+
+model mesocycle{
   id Int @id @default(autoincrement())
-  username String @unique
-  email String @unique
-  password String
-  mesocycle Mesocycle[]
+  mesoname String
+  length Int
+  sessions session[]
+  mesocylepriority mesocyclepriority[]
 }
 
-model Mesocycle {
-  id        Int         @id @default(autoincrement())
-  name      String      
-  deletedAt DateTime?
-  numberOfWeeks Int?
-  frequency Frequency[]
-  week      Week[]
-  userId Int ?
-  user User ? @relation(fields: [userId], references: [id])
-  @@index([deletedAt])
+model session{
+  id Int @id @default(autoincrement())
+  mesocycle mesocycle @relation(fields: [mesocycleId], references: [id])
+  mesocycleId Int
+  weeknumber Int
+  daynumber Int
+  label String?
+  status String @default("pending")
+  sessionexercise sessionexercise[]
+  feedback feedback[]
 }
 
-model Week {
-  id             Int              @id @default(autoincrement())
-  week_name      String
-  mesocycleId    Int
-  completed      Boolean?         @default(false)
-  deletedAt      DateTime?
-  session        Session[]
-  startingvolume StartingVolume[]
-  mesocycle      Mesocycle        @relation(fields: [mesocycleId], references: [id])
-
-  @@index([deletedAt])
+model mesocyclepriority{
+  id Int @id @default(autoincrement())
+  checkwhichmesocycle mesocycle @relation(fields: [mesocycleId], references: [id])
+  mesocycleId Int
+  musclegroupid Int
+  priority String
 }
 
-model StartingVolume {
-  id        Int       @id @default(autoincrement())
-  set       Int
-  muscleId  Int
-  weekId    Int
-  deletedAt DateTime?
-  muscle    Muscle    @relation(fields: [muscleId], references: [id])
-  week      Week      @relation(fields: [weekId], references: [id])
-
-  @@index([deletedAt])
+model sessionexercise{
+  id Int @id @default(autoincrement())
+  whichsession session @relation(fields: [workoutid], references: [id])
+  exercise   exercise @relation(fields: [exerciseId], references: [id])
+   exerciseId Int
+  workoutid Int
+  notes String? 
+  set set[]
 }
 
-model Frequency {
-  id           Int       @id @default(autoincrement())
-  timesPerWeek Int
-  muscleId     Int
-  mesocycleId  Int
-  deletedAt    DateTime?
-  mesocycle    Mesocycle @relation(fields: [mesocycleId], references: [id])
-  muscle       Muscle    @relation(fields: [muscleId], references: [id])
-
-  @@index([deletedAt])
+model feedback{
+  id Int @id @default(autoincrement())
+  whichsession session @relation(fields: [workoutid], references: [id])
+  workoutid Int
+  musclegroupid Int
+  soreness Int
+  pump Int
+  workload Int
+  jointpain Int
 }
 
-model Muscle {
-  id                    Int                     @id @default(autoincrement())
-  muscle_name           String                  @unique
-  exercise              Exercise[]
-  frequency             Frequency[]
-  sessionmusclefeedback SessionMuscleFeedback[]
-  startingvolume        StartingVolume[]
-}
+model set {
+  id                   Int             @id @default(autoincrement())
+  setNumber            Int
+  weight               Float?
+  reps                 Int?
+  rir                  Int?
+  repsTarget           Int?
+  rirTarget            Int?
+  status               String          @default("pending")
+  sessionexerciseId    Int
+  whichsessionexercise sessionexercise @relation(fields: [sessionexerciseId], references: [id])
 
-model Session {
-  id                    Int                     @id @default(autoincrement())
-  session_name          String
-  weekId                Int
-  deletedAt             DateTime?
-  exerciselogs          Exerciselog[]
-  week                  Week                    @relation(fields: [weekId], references: [id])
-  sessionmusclefeedback SessionMuscleFeedback[]
-
-  @@index([deletedAt])
-}
-
-model Sorenessfeedback {
-  id                    Int                     @id @default(autoincrement())
-  soreness_score        Int
-  description           String
-  sessionmusclefeedback SessionMuscleFeedback[]
-}
-
-model Performancefeedback {
-  id                    Int                     @id @default(autoincrement())
-  performance_score     Int
-  description           String
-  sessionmusclefeedback SessionMuscleFeedback[]
-}
-
-model SessionMuscleFeedback {
-  id                    Int                  @id @default(autoincrement())
-  sessionId             Int
-  muscleId              Int
-  sorenessfeedbackId    Int?
-  performancefeedbackId Int?
-  deletedAt             DateTime?
-  muscle                Muscle               @relation(fields: [muscleId], references: [id])
-  performancefeedback   Performancefeedback? @relation(fields: [performancefeedbackId], references: [id])
-  session               Session              @relation(fields: [sessionId], references: [id])
-  sorenessfeedback      Sorenessfeedback?    @relation(fields: [sorenessfeedbackId], references: [id])
-
-  @@unique([sessionId, muscleId])
-  @@index([deletedAt])
-}
-
-model Exercise {
-  id            Int           @id @default(autoincrement())
-  exercise_name String        @unique
-  muscleId      Int
-  muscle        Muscle        @relation(fields: [muscleId], references: [id])
-  exerciselogs  Exerciselog[]
-}
-
-model Exerciselog {
-  id         Int       @id @default(autoincrement())
-  exerciseId Int
-  sessionId  Int
-  deletedAt  DateTime?
-  exercise   Exercise  @relation(fields: [exerciseId], references: [id])
-  session    Session   @relation(fields: [sessionId], references: [id])
-  set        Set[]
-
-  @@unique([exerciseId, sessionId])
-  @@index([deletedAt])
-}
-
-model Set {
-  id            Int         @id @default(autoincrement())
-  reps          Int
-  weight        Float
-  rir           Int
-  exerciselogId Int
-  deletedAt     DateTime?
-  exerciselog   Exerciselog @relation(fields: [exerciselogId], references: [id])
-
-  @@index([deletedAt])
+  @@unique([sessionexerciseId, setNumber])
 }

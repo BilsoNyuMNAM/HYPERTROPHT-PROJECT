@@ -1,41 +1,28 @@
 
-import CreateMesocycle from './pages/Createmesocycle'
-import Performance from './pages/Performance'
-import Mesocycleui from './pages/Mesocycleui'
-import { Routes, Route, BrowserRouter} from 'react-router-dom'
-import {QueryClientProvider,QueryClient} from '@tanstack/react-query' 
-import Allmesocycle from './pages/Allmesocycle'
-import './App.css'
-import Weekpage from './pages/Weekpage'
-import Sessionpage from './pages/Sessionpage'
-import LandingPage from './pages/LandingPage'
-import Signup from './pages/Singup'
-import Login from './pages/Login'
-import PagenotFound from './pages/PagenotFound'
-
-
-const queryClient = new QueryClient();
-function App(){
+import Frequency from "../pages/noofdays"
+import Musclepriority from "../pages/priorities"
+import AddExercise from "../pages/Fillexercise"
+import ContextProvider from "../helper/context"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import WorkoutUi from "../pages/WorkoutUi"
+import Homepage from "../pages/Homepage"
+import Pagenotfound from "../pages/PagenotFound"
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-    <div className='h-screen w-full bg-black'>
+    <ContextProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage/>} />
-          <Route path="/login" element={<Login/>} />
-          <Route path="/Allmesocycle" element={<Allmesocycle/>} />
-          <Route path="/signup" element={<Signup/>} />
-          <Route path="/create-mesocycle" element = {<CreateMesocycle/>}/>
-          <Route path="/mesocycle/week/:weekId" element={<Weekpage/>}/>
-          <Route path="/mesocycle/display/:id" element = {<Mesocycleui/>}/>
-          <Route path="/mesocycle/week/session/:sessionId" element={<Sessionpage/>}/>
-          <Route path="/performance" element={<Performance/>}/>
-          <Route path="*" element={<PagenotFound />} />
-         
-        </Routes>
+        <div>
+          <Routes>
+            <Route path="/mesocycles/builder" element={<Frequency />} />
+            <Route path="/mesocycles/plan/builder/priorities" element={<Musclepriority />} />
+            <Route path="/mesocycles/new" element={<AddExercise />} />
+            <Route path="/mesocycles/:mesocycleId/week/:weeknumber/days/:daynumber" element={<WorkoutUi/>}/>
+            <Route path="/home" element={<Homepage/>}/>
+            <Route path="*" element={<Pagenotfound/>}/>
+          </Routes>
+        </div>
       </BrowserRouter>
-    </div>
-    </QueryClientProvider>
+    </ContextProvider>
   )
 }
 
