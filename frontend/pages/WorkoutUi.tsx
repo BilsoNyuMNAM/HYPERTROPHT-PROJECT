@@ -9,6 +9,7 @@ import useWorkoutDay from "../helper/useWorkoutDay"
 import ErrorState from "../components/ErrorState"
 import {Post} from "../src/service/centralisedApi.js"
 import ToastDialog from "../components/ToastDialog"
+import { Loader2, Check } from "lucide-react"
 
 export default function WorkoutUi() {
    const { mesocycleId, weeknumber, daynumber } = useParams()
@@ -22,6 +23,7 @@ export default function WorkoutUi() {
     const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null)
     const [promptMessage, setPromptMessage] = useState<string | null>(null)
     const [replacePrompt, setReplacePrompt] = useState<{ oldId: number; newExercise: any } | null>(null)
+    const [isCompleting, setIsCompleting] = useState(false)
     
     const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -195,7 +197,7 @@ export default function WorkoutUi() {
                 exercise.exerciseId === oldId
                     ? {
                         ...exercise,
-                        exerciseId: newExercise.id,
+                        exerciseId: newExercise.id, //{"id": 116, "name": "Barbell Facepull","muscleGroupId": 5}
                         exercise: newExercise,
                         set: exercise.set.map((eachset: any) => ({
                             ...eachset,
@@ -211,10 +213,43 @@ export default function WorkoutUi() {
         setReplacePrompt(null)
     }
 
+    //remaining-weeks scope: persist the swap for every pending session from this day to the end of the mesocycle
+    async function replaceTheRemainingWeek() {
+        if (!replacePrompt) return
+        const { oldId, newExercise } = replacePrompt
+
+        const response = await Post("/training/replace", {
+            oldId,
+            newId: newExercise.id,
+            mesocycleId: Number(mesocycleId),
+            weeknumber: Number(weeknumber),
+            daynumber: Number(daynumber),
+        }).catch(() => null)
+
+        if (!response) {
+            showPrompt("Failed to reach server")
+            return
+        }
+
+        const result = await response.json().catch(() => null)
+
+        if (response.status !== 200) {
+            showPrompt(result?.message || `Replace failed (${response.status})`)
+            setReplacePrompt(null)
+            return
+        }
+
+        replaceForThisSession() //this day's card, plus its saved draft, now holds the new exercise
+        await fetchAllweekdata(true) //refresh the other weeks without blanking the screen
+        showPrompt(result?.message || "Exercise replaced for the remaining weeks")
+    }
+
     
 
     //this function send the session data to the server
     async function sendData(){
+        if (isCompleting) return
+        setIsCompleting(true)
         try {
             const response = await Post("/mesocycles/complete", sessionData)
             const result = await response.json().catch(() => null)
@@ -222,10 +257,21 @@ export default function WorkoutUi() {
 
             if (response.status === 200) {
                 localStorage.removeItem(storageKey)
+                setSessiondata((prev: any) => ({ ...prev, status: "completed" }))
+                setData((prev: any) => {
+                    if (!prev) return prev
+                    return {
+                        ...prev,
+                        sessions: prev.sessions?.map((s: any) =>
+                            s.id === sessionData.id ? { ...s, status: "completed" } : s
+                        )
+                    }
+                })
                 showPrompt(message)
             } else if (response.status === 404) {
                 showPrompt(message)
             } else if (response.status === 409) {
+                setSessiondata((prev: any) => ({ ...prev, status: "completed" }))
                 showPrompt(message)
             } else if (response.status === 500) {
                 showPrompt(message)
@@ -234,14 +280,18 @@ export default function WorkoutUi() {
             }
         } catch (error) {
             showPrompt(error instanceof Error ? error.message : "Failed to connect to server")
+        } finally {
+            setIsCompleting(false)
         }
     }
 
 
 
-    async function fetchAllweekdata() {
-        setLoading(true)
-        setLoadingError(null)
+    async function fetchAllweekdata(silent = false) {
+        if (!silent) {
+            setLoading(true)
+            setLoadingError(null)
+        }
         try {
             //@ts-ignore
             const response = await fetch(`${import.meta.env.VITE_API_URL}/mesocycles/all/${mesocycleId}`)
@@ -254,9 +304,13 @@ export default function WorkoutUi() {
             }
             setData(result)
         } catch (error) {
-            setLoadingError(error instanceof Error ? error.message : "Failed to load this mesocycle")
+            if (!silent) {
+                setLoadingError(error instanceof Error ? error.message : "Failed to load this mesocycle")
+            }
         } finally {
-            setLoading(false)
+            if (!silent) {
+                setLoading(false)
+            }
         }
     }
 
@@ -298,7 +352,7 @@ export default function WorkoutUi() {
 
 
     if (loadingError) {
-        return <ErrorState message={loadingError} onRetry={fetchAllweekdata} />
+        return <ErrorState message={loadingError} onRetry={() => fetchAllweekdata()} />
     }
 
     if (loading || (sessionData == undefined)) {
@@ -313,6 +367,7 @@ export default function WorkoutUi() {
     }
 
     const totalWeeks = Math.max(...data.sessions.map((session: any) => session.weeknumber))
+    const isSessionCompleted = sessionData?.status === "completed" || currentSession?.status === "completed"
 
     return (
         <div className="min-h-screen w-full bg-[#000000] text-[#ededed] px-4 py-8 sm:px-6 sm:py-10">
@@ -335,11 +390,29 @@ export default function WorkoutUi() {
                 <div className="mt-8">
                     <button
                         type="button"
-                        className="group flex w-full items-center justify-center gap-3 rounded-xl bg-red-600 px-5 py-3.5 text-[15px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_30px_-12px_rgba(220,38,38,0.9)] transition-colors duration-150 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000] active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0"
+                        disabled={isCompleting || isSessionCompleted}
+                        className={`group flex w-full items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-[15px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000] ${
+                            isSessionCompleted
+                                ? "border border-green-700/60 bg-neutral-900 text-green-400 cursor-not-allowed shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)]"
+                                : isCompleting
+                                ? "bg-red-800 text-white cursor-not-allowed opacity-80"
+                                : "bg-red-600 text-white hover:bg-red-500 active:translate-y-px shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_30px_-12px_rgba(220,38,38,0.9)]"
+                        }`}
                         onClick={sendData}
                     >
-                        
-                        Complete workout
+                        {isCompleting ? (
+                            <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <span>Completing workout...</span>
+                            </>
+                        ) : isSessionCompleted ? (
+                            <>
+                                <Check className="h-5 w-5 text-green-400 stroke-[2.5]" />
+                                <span>Completed</span>
+                            </>
+                        ) : (
+                            "Complete workout"
+                        )}
                     </button>
                 </div>
             </div>
@@ -383,7 +456,7 @@ export default function WorkoutUi() {
                         <div className="mt-5 flex flex-col gap-2">
                             <button
                                 type="button"
-                                onClick={() => { showPrompt("Remaining week replace is not available yet"); setReplacePrompt(null) }}
+                                onClick={replaceTheRemainingWeek}
                                 className="w-full rounded-lg border border-[#222222] py-2.5 text-sm font-semibold text-[#ededed] transition-colors hover:border-[#333333] hover:bg-[#141414] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60"
                             >
                                 Remaining week

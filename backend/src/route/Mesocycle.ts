@@ -73,7 +73,10 @@ mesoRoute.post("/complete", async(req, res)=>{ //complete workout  route
     //if false => save workout in transaction
     try {
         await prisma.$transaction(async (tx)=>{
-            await updateTable(tx, sessionId, req.body.exercises, req.body.feedback)
+            await updateTable(tx, sessionId, req.body.sessionexercise, req.body.feedback)
+        }, {
+            maxWait: 5000,
+            timeout: 15000
         })
         return res.status(200).json({
             message: "Session completed successfully"

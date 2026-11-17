@@ -46,6 +46,7 @@ export default function Setcard({ exerciseData, updateSet, competeSet, deleteSet
     }, [allexercise])
 
     const exercisesLoading = !allexercise && !exerciseError
+    const dayRir = exerciseData.set?.[0]?.rirTarget //RIR target is the same for every set of the week
 
     
 
@@ -149,10 +150,10 @@ export default function Setcard({ exerciseData, updateSet, competeSet, deleteSet
             )}
             
             <div className={`${row} mt-4 border-t border-[#1a1a1a] pt-3 pb-1 text-[10px] font-semibold tracking-[0.1em] text-[#5a5a5a]`}>
-                <div>SET</div>
-                <div>WEIGHT</div>
-                <div>REPS</div>
-                <div>LOG</div>
+                <div className="text-center">SET</div>
+                <div className="text-center">WEIGHT</div>
+                <div className="truncate text-center">REPS{dayRir != null ? ` · ${dayRir} RIR` : ""}</div>
+                <div className="text-center">LOG</div>
                 <div />
             </div>
 
@@ -189,7 +190,7 @@ export default function Setcard({ exerciseData, updateSet, competeSet, deleteSet
                                 checked={eachset.status === "completed"}
                                 onChange={()=>{ competeSet(eachset.id)}}
                                 aria-label={`Log set ${index+1}`}
-                                className="h-5 w-5 cursor-pointer accent-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                                className="h-5 w-5 justify-self-center cursor-pointer accent-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
                             />
                             <button
                                 type="button"

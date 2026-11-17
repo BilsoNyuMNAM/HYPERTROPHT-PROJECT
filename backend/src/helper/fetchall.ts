@@ -7,8 +7,14 @@ async function fetchalldata(id:number){
         },
         include:{
             sessions:{
+                orderBy: [
+                    { weeknumber: "asc" },
+                    { daynumber: "asc" }
+                ],
                 include:{
                     sessionexercise:{
+                        // rows are rewritten by updates, so physical order is not stable
+                        orderBy: { id: "asc" },
                         select:{
                             id:true,
                              exerciseId:true,
@@ -20,7 +26,8 @@ async function fetchalldata(id:number){
                                         name:true
                                     }
                             },
-                            set:true
+                            // without this, Postgres returns sets in heap order, not setNumber order
+                            set: { orderBy: { setNumber: "asc" } }
                         }
                     }
                 }

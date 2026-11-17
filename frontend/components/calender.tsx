@@ -22,7 +22,9 @@ export default function CalendarModal({
     const weeks = Array.from({ length: totalWeeks }, (_, i) => i + 1)
 
  
-    const dayRows = sessions.filter((s: any) => s.weeknumber === 1) //all week label are similar so 1 will work fine
+    const dayRows = sessions
+        .filter((s: any) => s.weeknumber === 1)
+        .sort((a: any, b: any) => a.daynumber - b.daynumber)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
