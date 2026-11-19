@@ -31,6 +31,8 @@ export function repCalculation(lastweekweight:number, selectedWeight:number, tar
       //2. calculating reps based on the entered weight 
     //a. calculated the 1rm :
     if(lastweekrep <= 0) return null //skipped set is saved as -1, same rule as Repprogression
+    if(lastweekweight <= 0) return null //bodyweight set: 1RM cannot come from the added weight
+    if(selectedWeight <= 0) return null //no weight typed yet
 
 
     const index = (lastweekrep+lastweekrir)-1

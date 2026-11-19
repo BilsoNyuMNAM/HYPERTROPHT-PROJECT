@@ -1,82 +1,82 @@
 {
   "$schema": "https://aka.ms/codetour-schema",
-  "title": "Exercise Replace: Session vs Remaining Week",
-  "description": "How picking a replacement exercise flows from Setcard to the scope dialog, and where a remaining-week replace has to touch the backend.",
+  "title": "Exercise Replace: Session vs Remaining Weeks",
+  "description": "How picking a replacement exercise flows from Setcard to the scope dialog, and how the remaining-weeks scope is persisted and kept in sync with saved drafts.",
   "steps": [
     {
       "directory": "frontend",
       "title": "Frontend Layout",
-      "description": "Pages hold route-level screens, components hold the cards and dialogs, helper holds data shaping. The replace feature lives in pages/WorkoutUi.tsx (state + dialog) and components/setComponent.tsx (picker)."
+      "description": "Pages hold route-level screens, components hold cards and dialogs, helper holds data shaping. The replace feature lives in pages/WorkoutUi.tsx (state + dialog) and components/setComponent.tsx (picker)."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 242,
+      "line": 290,
       "title": "All Weeks Loaded Up Front",
-      "description": "fetchAllweekdata pulls the whole mesocycle tree once per mesocycleId: every session, every sessionexercise, every set. This is why a 'remaining week' replace can be computed on the client, but also why it must be persisted server-side to survive a reload."
+      "description": "fetchAllweekdata pulls the whole mesocycle tree once per mesocycleId, and again silently after a replace. Every session, sessionexercise and set arrives together, which is why the client can compute the remaining-scope draft keys without another request."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 270,
+      "line": 324,
       "title": "Current Session and Storage Key",
-      "description": "The URL weeknumber/daynumber pick one session out of data.sessions. storageKey scopes the local draft per day, so edits on one day never leak into another day's draft on their own."
+      "description": "The URL weeknumber/daynumber select one session out of data.sessions. storageKey scopes the local draft per day, so edits on one day do not leak into another day's draft."
     },
     {
       "file": "frontend/helper/copySessiondata.ts",
       "line": 1,
       "title": "Isolated Working Copy",
-      "description": "copySessionData deep-copies sessionexercise and set and resets feedback. sessionData is the editable draft; data stays the untouched server snapshot. Any remaining-week logic that updates other days must not mutate data by accident."
+      "description": "copySessionData deep-copies sessionexercise and set and resets feedback. sessionData is the editable draft; data stays the untouched server snapshot. The remaining-weeks logic edits data through setData, never by mutating it."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 279,
+      "line": 341,
       "title": "Saved Draft Wins",
-      "description": "On mount, a localStorage draft for this day overrides the server copy, otherwise the fetched session is copied in. Gotcha: if a replace is only written to React state, reloading this day restores the old exercise from the saved draft."
+      "description": "On mount, a localStorage draft for this day overrides the server copy. Gotcha: merely visiting a future day creates a draft, so a server-side replace alone would still be hidden by that older draft. This is why the remaining-weeks path removes the drafts it invalidates."
     },
     {
       "file": "frontend/components/setComponent.tsx",
       "line": 135,
       "title": "Picker Hands Off the Exercise",
-      "description": "Selecting an exercise calls replaceExercise(exerciseData.exerciseId, exercise). Note the first argument is the global exercise ID, not the sessionexercise row ID; the parent uses it to find every row to rewrite. The picker only offers exercises from the same muscle group."
+      "description": "Selecting an exercise calls replaceExercise(exerciseData.exerciseId, exercise). The first argument is the global exercise ID, not the sessionexercise row ID, so every matching row can be found by exerciseId. The picker only offers exercises from the same muscle group."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 184,
+      "line": 186,
       "title": "Replace Request Opens the Scope Dialog",
-      "description": "replaceExercise does no mutation. It stores { oldId, newExercise } in replacePrompt, which renders the dialog. This is the single entry point for both scopes, so any new scope branch starts here."
+      "description": "replaceExercise does no mutation; it stores { oldId, newExercise } in replacePrompt, which renders the dialog. Both scopes start from this single entry point."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 386,
+      "line": 466,
       "title": "The Remaining Week Button",
-      "description": "This button is the unfinished branch: it only toasts 'not available yet' and closes the dialog. Its counterpart below calls replaceForThisSession. This is where replaceTheRemainingWeek belongs."
+      "description": "This button calls replaceTheRemainingWeek. Its sibling below calls replaceForThisSession. The dialog text promises the remaining week, while the backend actually covers every pending session from this day to the end of the mesocycle."
     },
     {
       "file": "frontend/pages/WorkoutUi.tsx",
-      "line": 189,
-      "title": "Session-Only Replace (Reference Implementation)",
-      "description": "replaceForThisSession swaps exerciseId and exercise, keeps the set count, blanks weight/reps/rir and resets status. It only touches the in-memory draft; nothing is sent to the server. Use this as the shape for the remaining-week rewrite, but target other sessions as well."
+      "line": 191,
+      "title": "Session-Only Replace",
+      "description": "replaceForThisSession swaps exerciseId and exercise, keeps the set count, blanks weight/reps/rir and resets status on the in-memory draft. Only localStorage persists it until the workout is completed."
     },
     {
-      "file": "backend/src/helper/fetchall.ts",
-      "line": 3,
-      "title": "What the Server Returns",
-      "description": "The mesocycle query includes sessions with their sessionexercise rows and sets. Each session owns its own sessionexercise rows, so the same exercise for the same muscle appears as a different row ID in every week/day. Replacing 'the exercise for the remaining week' means one update per matching row across the remaining sessions."
+      "file": "frontend/pages/WorkoutUi.tsx",
+      "line": 217,
+      "title": "Remaining-Weeks Replace",
+      "description": "Posts the swap to /training/replace, then applies the same swap locally for this session, clears drafts of pending later days, and silently refetches so other weeks show the new exercise. Note the server count is not used to report which days changed; the toast uses the server message."
     },
     {
-      "file": "backend/prisma/schema.prisma",
-      "line": 51,
-      "title": "The Row That Actually Changes",
-      "description": "sessionexercise carries exerciseId plus workoutid (the session). Sets hang off sessionexercise, not the exercise library. So a swap is an exerciseId update on each remaining sessionexercise row; the set rows can stay as scheduled progressions unless you also want to blank them."
+      "file": "backend/src/helper/replaceExercise.ts",
+      "line": 4,
+      "title": "The Scope Predicate",
+      "description": "A single updateMany rewrites sessionexercise.exerciseId for every row where the exercise matches and the owning session is pending and is at or after the current week/day. Changing this filter is the only place that changes which weeks are covered; today is included via gte."
     },
     {
       "file": "backend/src/route/Exercise.ts",
-      "line": 14,
-      "title": "Existing Stub for Persistence",
-      "description": "A POST /api/training/replace route was started but currently just returns the exercise list. A real remaining-week replace needs this route to write sessionexercise.exerciseId for the targeted future sessions, or it will be lost on the next fetch."
+      "line": 15,
+      "title": "Route Wiring",
+      "description": "POST /api/training/replace reads the ids from the body, coerces them with Number, returns updated.count, and maps thrown errors to 400. Missing fields become NaN and fail in Prisma rather than being rejected explicitly."
     },
     {
       "title": "Next Move",
-      "description": "Decide the scope contract (rest of this week only, or every remaining week), then implement one server write plus the client call and state refresh. The session-only path already shows the local shape; the backend stub is the persistence hook."
+      "description": "The flow is complete end to end: picker, scope dialog, session draft, server write, draft invalidation, silent refresh. To widen or narrow the scope, edit the OR filter in backend/src/helper/replaceExercise.ts."
     }
   ]
 }

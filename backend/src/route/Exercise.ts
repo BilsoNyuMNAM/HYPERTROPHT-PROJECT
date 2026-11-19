@@ -1,6 +1,8 @@
 import express from "express"
 import fetchAllexercise from "../helper/fetchAllexercise.js";
 import replaceExercise from "../helper/replaceExercise.js";
+import { repCalculation } from "../helper/algorithm/weigthprogression.js";
+import FinddataOflstWk from "../helper/finddataoflastweek.js";
 const exerciseRoute = express();
 
 
@@ -28,6 +30,18 @@ exerciseRoute.post("/replace",async (req,res)=>{
             error: error
         });
     }
+})
+
+exerciseRoute.post("/reps",async (req,res)=>{
+    const {weeknumber, daynumber, setNumber, exerciseId, mesocycleId, selectedWeight, targetRir} = req.body
+    const lastSet = await FinddataOflstWk(Number(weeknumber), Number(daynumber), Number(setNumber), Number(exerciseId), Number(mesocycleId))
+
+    if(!lastSet || lastSet.weight == null || lastSet.reps == null || lastSet.rir == null){
+        return res.json({ reps: null })
+    }
+
+    const reps = repCalculation(lastSet.weight, Number(selectedWeight), Number(targetRir), lastSet.reps, lastSet.rir)
+    res.json({ reps })
 })
 
 export default exerciseRoute

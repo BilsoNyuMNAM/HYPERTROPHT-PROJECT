@@ -21,7 +21,7 @@ export const muscleNames: Record<number, string> = {
 
 const row = "grid grid-cols-[2.5rem_1fr_1fr_2rem_1.75rem] gap-3 items-center"
 
-export default function Setcard({ exerciseData, updateSet, competeSet, deleteSet, addSet, replaceExercise }: { exerciseData: any, updateSet:any, competeSet:any, deleteSet:any, addSet:any, replaceExercise:any }) {
+export default function Setcard({ exerciseData, updateSet, recalculateReps, competeSet, deleteSet, addSet, replaceExercise }: { exerciseData: any, updateSet:any, recalculateReps:any, competeSet:any, deleteSet:any, addSet:any, replaceExercise:any }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [pickerOpen, setPickerOpen] = useState(false)
     const { allexercise, setAllexercise } = useContext(noOfexerciseAndsessionContext)
@@ -174,6 +174,7 @@ export default function Setcard({ exerciseData, updateSet, competeSet, deleteSet
                                 value={eachset.weight==null?"":eachset.weight}
                                 name="weight"
                                 onChange={(e)=>{updateSet(eachset.id, e.target.name, e.target.value)}}
+                                onBlur={()=>{recalculateReps(eachset.id)}}
                             />
                             <input
                                 type="text"

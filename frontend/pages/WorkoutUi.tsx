@@ -24,6 +24,7 @@ export default function WorkoutUi() {
     const [promptMessage, setPromptMessage] = useState<string | null>(null)
     const [replacePrompt, setReplacePrompt] = useState<{ oldId: number; newExercise: any } | null>(null)
     const [isCompleting, setIsCompleting] = useState(false)
+    const prompt = "Change the weight if you want. Just keep the reps inside the target RIR — the rep number is only a recommendation."
     
     const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -58,6 +59,50 @@ export default function WorkoutUi() {
         } 
         console.log("updated session data:",sessionData)
         setSessiondata(updatedSessiondata)
+    }
+
+
+    //after the user leaves the weight cell, ask the backend for the target reps of that weight
+    async function recalculateReps(setId: number) {
+        if (Number(weeknumber) < 2) return //progression starts from week 2
+        if (typeof setId !== "number") return //a set added today has no last week row
+
+        const exercise = sessionData.sessionexercise.find((element: any) => element.set.some((eachset: any) => eachset.id === setId))
+        const targetSet = exercise?.set.find((eachset: any) => eachset.id === setId)
+        if (!exercise || !targetSet) return
+
+        const selectedWeight = Number(targetSet.weight)
+        if (!targetSet.weight || Number.isNaN(selectedWeight) || selectedWeight <= 0) return
+
+        try {
+            const response = await Post("/training/reps", {
+                mesocycleId: Number(mesocycleId),
+                weeknumber: Number(weeknumber),
+                daynumber: Number(daynumber),
+                setNumber: targetSet.setNumber,
+                exerciseId: exercise.exerciseId,
+                selectedWeight,
+                targetRir: targetSet.rirTarget,
+            })
+            if (!response.ok) return
+
+            const { reps } = await response.json()
+            setSessiondata({
+                ...sessionData,
+                sessionexercise: sessionData.sessionexercise.map((element: any) =>
+                    element.set.some((eachset: any) => eachset.id === setId)
+                        ? {
+                            ...element,
+                            set: element.set.map((eachset: any) =>
+                                eachset.id === setId ? { ...eachset, reps: reps ?? null } : eachset
+                            ),
+                        }
+                        : element
+                ),
+            })
+        } catch {
+            return //keep the old reps when the call fails
+        }
     }
 
 
@@ -240,6 +285,13 @@ export default function WorkoutUi() {
         }
 
         replaceForThisSession() //this day's card, plus its saved draft, now holds the new exercise
+        //a day visited earlier already has a saved draft, and that draft would keep the old exercise
+        data.sessions.forEach((session: any) => {
+            const laterSameWeek = session.weeknumber === Number(weeknumber) && session.daynumber > Number(daynumber)
+            if (session.status === "pending" && (session.weeknumber > Number(weeknumber) || laterSameWeek)) {
+                localStorage.removeItem(`workout-${mesocycleId}-${session.weeknumber}-${session.daynumber}`)
+            }
+        })
         await fetchAllweekdata(true) //refresh the other weeks without blanking the screen
         showPrompt(result?.message || "Exercise replaced for the remaining weeks")
     }
@@ -380,10 +432,17 @@ export default function WorkoutUi() {
                     openCloseCalender={setOpen}
                     isCalenderopen={isCalenderopen}
                 />
-
+                {Number(weeknumber) > 1 && (
+                    <div className="mt-5 rounded-md border border-[#1f1f1f] border-l-2 border-l-red-600/70 bg-[#0a0a0a] px-4 py-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-red-500">
+                            Auto-regulation
+                        </div>
+                        <p className="mt-1.5 text-[12.5px] leading-[1.65] text-[#8a8a8a]">{prompt}</p>
+                    </div>
+                )}
                 <div className="mt-6 flex flex-col gap-3">
                     {sessionData.sessionexercise.map((exerciseobject: any, index: number) => (
-                        <Setcard key={exerciseobject.id} exerciseData={exerciseobject} updateSet={updateSet} competeSet={competeSet} deleteSet={deleteSet} addSet={addSet} replaceExercise={replaceExercise} />
+                        <Setcard key={exerciseobject.id} exerciseData={exerciseobject} updateSet={updateSet} recalculateReps={recalculateReps} competeSet={competeSet} deleteSet={deleteSet} addSet={addSet} replaceExercise={replaceExercise} />
                     ))}
                 </div>
 
@@ -393,7 +452,7 @@ export default function WorkoutUi() {
                         disabled={isCompleting || isSessionCompleted}
                         className={`group flex w-full items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 text-[15px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000] ${
                             isSessionCompleted
-                                ? "border border-green-700/60 bg-neutral-900 text-green-400 cursor-not-allowed shadow-[0_0_20px_-10px_rgba(34,197,94,0.3)]"
+                                ? "bg-[#111111] text-[#7f8c7f] cursor-not-allowed"
                                 : isCompleting
                                 ? "bg-red-800 text-white cursor-not-allowed opacity-80"
                                 : "bg-red-600 text-white hover:bg-red-500 active:translate-y-px shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_10px_30px_-12px_rgba(220,38,38,0.9)]"
@@ -407,7 +466,7 @@ export default function WorkoutUi() {
                             </>
                         ) : isSessionCompleted ? (
                             <>
-                                <Check className="h-5 w-5 text-green-400 stroke-[2.5]" />
+                                <Check className="h-5 w-5 text-green-600/70 stroke-[2.5]" />
                                 <span>Completed</span>
                             </>
                         ) : (
