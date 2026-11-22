@@ -7,9 +7,10 @@ interface headerdata {
     label: string
     openCloseCalender: any
     isCalenderopen: boolean
+    openSummary: () => void
 }
 
-export default function Workoutheader({ name, weeknumber, daynumber, label, openCloseCalender, isCalenderopen }: headerdata) {
+export default function Workoutheader({ name, weeknumber, daynumber, label, openCloseCalender, isCalenderopen, openSummary }: headerdata) {
     return (
         <header className="flex items-start justify-between gap-4 border-b border-[#222222] pb-5">
             <div className="min-w-0">
@@ -23,15 +24,25 @@ export default function Workoutheader({ name, weeknumber, daynumber, label, open
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={() => openCloseCalender(!isCalenderopen)}
-                aria-expanded={isCalenderopen}
-                className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm font-medium text-[#8a8a8a] transition-colors hover:border-[#333333] hover:bg-[#141414] hover:text-[#ededed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000]"
-            >
-                <CalendarDays size={16} strokeWidth={1.75} />
-                Calendar
-            </button>
+            <div className="shrink-0 flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={openSummary}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm font-medium text-[#8a8a8a] transition-colors hover:border-[#333333] hover:bg-[#141414] hover:text-[#ededed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000]"
+                >
+                    Summary
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => openCloseCalender(!isCalenderopen)}
+                    aria-expanded={isCalenderopen}
+                    className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-[#222222] bg-[#0a0a0a] px-3 py-2 text-sm font-medium text-[#8a8a8a] transition-colors hover:border-[#333333] hover:bg-[#141414] hover:text-[#ededed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] focus-visible:ring-offset-2 focus-visible:ring-offset-[#000000]"
+                >
+                    <CalendarDays size={16} strokeWidth={1.75} />
+                    Calendar
+                </button>
+            </div>
         </header>
     )
 }

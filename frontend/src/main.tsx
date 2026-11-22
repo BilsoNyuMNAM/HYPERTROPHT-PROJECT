@@ -6,7 +6,7 @@ import App from './App.tsx'
 // Add once in your app entry (e.g. layout.tsx, _app.tsx, main.tsx)
 const queryClient = new QueryClient();
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <StrictMode> 
     <QueryClientProvider client={queryClient}>
       <App />
     </QueryClientProvider>

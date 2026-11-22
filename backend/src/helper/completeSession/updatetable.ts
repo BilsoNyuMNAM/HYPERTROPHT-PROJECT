@@ -93,8 +93,8 @@ export default async function updateTable(
             const repsVal = isCompleted ? (Math.round(Number(set.reps)) || 0) : -1
             const rirVal = isCompleted ? (set.rir != null ? Number(set.rir) : null) : null
 
-            rep[payloadExercise.exerciseId].push(isCompleted ? Number(set.reps) : -1)
-            lastweight[payloadExercise.exerciseId].push(weightVal)
+            rep[payloadExercise.exerciseId]!.push(isCompleted ? Number(set.reps) : -1)
+            lastweight[payloadExercise.exerciseId]!.push(weightVal)
 
             allSetsToCreate.push({
                 sessionexerciseId: payloadExercise.id,

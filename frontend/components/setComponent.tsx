@@ -21,7 +21,7 @@ export const muscleNames: Record<number, string> = {
 
 const row = "grid grid-cols-[2.5rem_1fr_1fr_2rem_1.75rem] gap-3 items-center"
 
-export default function Setcard({ exerciseData, updateSet, recalculateReps, competeSet, deleteSet, addSet, replaceExercise }: { exerciseData: any, updateSet:any, recalculateReps:any, competeSet:any, deleteSet:any, addSet:any, replaceExercise:any }) {
+export default function Setcard({ exerciseData, updateSet, recalculateReps, competeSet, deleteSet, addSet, replaceExercise, deleteWholeExercise, isSessionCompleted }: { exerciseData: any, updateSet:any, recalculateReps:any, competeSet:any, deleteSet:any, addSet:any, replaceExercise:any, deleteWholeExercise?: any, isSessionCompleted?: boolean }) {
     const [menuOpen, setMenuOpen] = useState(false)
     const [pickerOpen, setPickerOpen] = useState(false)
     const { allexercise, setAllexercise } = useContext(noOfexerciseAndsessionContext)
@@ -91,6 +91,16 @@ export default function Setcard({ exerciseData, updateSet, recalculateReps, comp
                                 className="w-full px-3 py-2 text-left text-sm text-[#ededed] hover:bg-[#1f1f1f] transition-colors"
                             >
                                 Replace exercise
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    deleteWholeExercise?.(exerciseData.exerciseId, exerciseData.exercise.name)
+                                    setMenuOpen(false)
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-[#1f1f1f] transition-colors"
+                            >
+                                Delete exercise
                             </button>
                         </div>
                     )}
@@ -190,8 +200,9 @@ export default function Setcard({ exerciseData, updateSet, recalculateReps, comp
                                 type="checkbox"
                                 checked={eachset.status === "completed"}
                                 onChange={()=>{ competeSet(eachset.id)}}
+                                disabled={isSessionCompleted}
                                 aria-label={`Log set ${index+1}`}
-                                className="h-5 w-5 justify-self-center cursor-pointer accent-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                                className="h-5 w-5 justify-self-center cursor-pointer accent-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] disabled:cursor-not-allowed disabled:opacity-40"
                             />
                             <button
                                 type="button"

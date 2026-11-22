@@ -96,7 +96,7 @@ export default function Feedback({ muscleName, onClose,updateFeedback,showSorene
 
                     <Question
                         title={`${muscleName} volume`}
-                        prompt={`How was the volume of work (number of hard sets) for your ${muscle}?`}
+                        prompt={`How would you rate the difficulty of the number of hardsets you did for your chest ${muscle}?`}
                     >
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                             {["Not enough", "Just right", "Pushed my limits", "Too much"].map((label,index) => (

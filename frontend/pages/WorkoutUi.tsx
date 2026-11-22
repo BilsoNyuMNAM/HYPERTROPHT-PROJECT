@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import Workoutheader from "../components/Workoutheader"
 import Setcard, { muscleNames } from "../components/setComponent"
 import CalendarModal from "../components/calender"
+import SummaryModal from "../components/summary"
 import Feedback from "../components/feedback"
 import { useParams } from "react-router-dom"
 import copySessionData from "../helper/copySessiondata"
@@ -9,21 +10,45 @@ import useWorkoutDay from "../helper/useWorkoutDay"
 import ErrorState from "../components/ErrorState"
 import {Post} from "../src/service/centralisedApi.js"
 import ToastDialog from "../components/ToastDialog"
-import { Loader2, Check } from "lucide-react"
-
+import { Loader2, Check, Plus } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import AddExercise from "./Addexercise"
 export default function WorkoutUi() {
    const { mesocycleId, weeknumber, daynumber } = useParams()
     
     const {setSessiondata,sessionData} = useWorkoutDay(); //holds the current session oBject - any changes for the day happens in this state variable 
     const [showSorenessSection, setSorenessSection] = useState(false) //decides if the soreness section of the feedback should be shown or not 
-    const [data, setData] = useState<any>(null) //stores all the data from week 1 to week N
-    const [loading, setLoading] = useState(true)
-    const [loadingError, setLoadingError] = useState<string | null>(null)
+    //stores all the data from week 1 to week N
+    // const [loading, setLoading] = useState(true)
+    // const [loadingError, setLoadingError] = useState<string | null>(null)
+
+    const {data, isPending, isError, error, refetch} = useQuery({
+        queryKey:["allweeksdata", mesocycleId],
+        queryFn: async ()=>{
+            const result = await fetch(`${import.meta.env.VITE_API_URL}/mesocycles/all/${mesocycleId}`)
+            if(!result.ok){
+                const errorObject = await result.json()
+                throw new Error(errorObject.error)
+            }
+            const jsonResult = await result.json()
+            return jsonResult
+
+        }
+    })
+    const queryClient = useQueryClient()
+
+
+
+
     const [isCalenderopen, setOpen] = useState(false)
+    const [isSummaryOpen, setSummaryOpen] = useState(false)
     const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null)
     const [promptMessage, setPromptMessage] = useState<string | null>(null)
     const [replacePrompt, setReplacePrompt] = useState<{ oldId: number; newExercise: any } | null>(null)
+    const [deletePrompt, setDeletePrompt] = useState<{ exerciseId: number; exerciseName: string } | null>(null)
     const [isCompleting, setIsCompleting] = useState(false)
+    const [isAddexerciseOpen, setOpenorClose]= useState(false)
+
     const prompt = "Change the weight if you want. Just keep the reps inside the target RIR — the rep number is only a recommendation."
     
     const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -200,6 +225,61 @@ export default function WorkoutUi() {
         })
         console.log(sessionData)
     }
+    function deleteCurrentonly(exerciseId: number) {
+        const filtered = sessionData.sessionexercise.filter(function (e: any) {
+            return e.exerciseId !== exerciseId
+        })
+        setSessiondata({ ...sessionData, sessionexercise: filtered })
+    }
+
+    function promptDeleteExercise(exerciseId: number, exerciseName: string) {
+        setDeletePrompt({ exerciseId, exerciseName })
+    }
+
+    function deleteForThisSession() {
+        if (!deletePrompt) return
+        deleteCurrentonly(deletePrompt.exerciseId)
+        setDeletePrompt(null)
+    }
+
+    const deleteMutation = useMutation({
+        mutationFn: async ({ exerciseId }: { exerciseId: number }) => {
+            const response = await Post("/training/delete", {
+                exerciseId: Number(exerciseId),
+                mesocycleId: Number(mesocycleId),
+                weeknumber: Number(weeknumber),
+                daynumber: Number(daynumber),
+            })
+            if (!response.ok) {
+                throw new Error("Failed to delete exercise")
+            }
+            const result = await response.json()
+            return result
+        },
+        onSuccess: (result, variables) => {
+            deleteCurrentonly(variables.exerciseId)
+            setDeletePrompt(null)
+            data?.sessions?.forEach((session: any) => {
+                const laterSameWeek = session.weeknumber === Number(weeknumber) && session.daynumber > Number(daynumber)
+                if (session.status === "pending" && (session.weeknumber > Number(weeknumber) || laterSameWeek)) {
+                    localStorage.removeItem(`workout-${mesocycleId}-${session.weeknumber}-${session.daynumber}`)
+                }
+            })
+            queryClient.invalidateQueries({ queryKey: ["allweeksdata"] })
+            showPrompt(result?.message || "Exercise deleted for the remaining weeks")
+        },
+        onError: (error: any) => {
+            showPrompt(error.message)
+        }
+    })
+
+    function deleteTheRemainingWeek() {
+        if (!deletePrompt) return
+        deleteMutation.mutate({ exerciseId: deletePrompt.exerciseId })
+    }
+
+
+
 
     function addSet(exerciseId) {
         setSessiondata({
@@ -259,41 +339,105 @@ export default function WorkoutUi() {
     }
 
     //remaining-weeks scope: persist the swap for every pending session from this day to the end of the mesocycle
+    const mutation = useMutation({
+        mutationFn: async ({oldId,newExercise}:{oldId:number,newExercise:any})=>{
+            const response = await Post("/training/replace", {oldId, newId: newExercise.id,mesocycleId: Number(mesocycleId),weeknumber: Number(weeknumber), daynumber: Number(daynumber), })
+            if (!response.ok) {
+                throw new Error("error in replacing the exercise")
+            }
+                        
+            
+            const jsonresponse = await response.json()
+            return jsonresponse
+            
+        
+        },
+        
+        onSuccess:(result)=>{
+            replaceForThisSession() 
+            data?.sessions?.forEach((session: any) => {
+                const laterSameWeek = session.weeknumber === Number(weeknumber) && session.daynumber > Number(daynumber)
+                if (session.status === "pending" && (session.weeknumber > Number(weeknumber) || laterSameWeek)) {
+                    localStorage.removeItem(`workout-${mesocycleId}-${session.weeknumber}-${session.daynumber}`)
+                }
+            })
+            queryClient.invalidateQueries({ queryKey: ["allweeksdata"] })  //invalidate the key so that all the weeks data can be refetch again
+             showPrompt(result?.message || "Exercise replaced for the remaining weeks")
+        },
+        onError:(error)=>{
+            showPrompt(error.message)
+        }
+    })
+    
     async function replaceTheRemainingWeek() {
         if (!replacePrompt) return
         const { oldId, newExercise } = replacePrompt
+        mutation.mutate({oldId,newExercise }) //calling the mutation
+ 
+    }
 
-        const response = await Post("/training/replace", {
-            oldId,
-            newId: newExercise.id,
-            mesocycleId: Number(mesocycleId),
-            weeknumber: Number(weeknumber),
-            daynumber: Number(daynumber),
-        }).catch(() => null)
-
-        if (!response) {
-            showPrompt("Failed to reach server")
-            return
-        }
-
-        const result = await response.json().catch(() => null)
-
-        if (response.status !== 200) {
-            showPrompt(result?.message || `Replace failed (${response.status})`)
-            setReplacePrompt(null)
-            return
-        }
-
-        replaceForThisSession() //this day's card, plus its saved draft, now holds the new exercise
-        //a day visited earlier already has a saved draft, and that draft would keep the old exercise
-        data.sessions.forEach((session: any) => {
-            const laterSameWeek = session.weeknumber === Number(weeknumber) && session.daynumber > Number(daynumber)
-            if (session.status === "pending" && (session.weeknumber > Number(weeknumber) || laterSameWeek)) {
-                localStorage.removeItem(`workout-${mesocycleId}-${session.weeknumber}-${session.daynumber}`)
+    const addExerciseMutation = useMutation({
+        mutationFn: async ({
+            exerciseId,
+            sessionId,
+            rirTarget,
+            weeknumber: weekNum,
+            daynumber: dayNum,
+            mesocycleId: mesoId
+        }: {
+            exerciseId: number;
+            sessionId: number;
+            rirTarget?: number;
+            weeknumber?: number;
+            daynumber?: number;
+            mesocycleId?: number;
+        }) => {
+            const response = await Post("/training/addexercise", {
+                exerciseId: Number(exerciseId),
+                sessionId: Number(sessionId),
+                rirTarget: rirTarget != null ? Number(rirTarget) : undefined,
+                mesocycleId: Number(mesoId ?? mesocycleId),
+                weeknumber: Number(weekNum ?? weeknumber),
+                daynumber: Number(dayNum ?? daynumber)
+            })
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}))
+                throw new Error(err.message || "Failed to add exercise")
             }
+            return await response.json()
+        },
+        onSuccess: async (result) => {
+            localStorage.removeItem(storageKey)
+            data?.sessions?.forEach((session: any) => {
+                if (session.weeknumber > Number(weeknumber) && session.daynumber === Number(daynumber)) {
+                    localStorage.removeItem(`workout-${mesocycleId}-${session.weeknumber}-${session.daynumber}`)
+                }
+            })
+            await queryClient.invalidateQueries({ queryKey: ["allweeksdata"] })
+            setOpenorClose(false)
+            showPrompt(result?.message || "Exercise added successfully")
+        },
+        onError: (error: any) => {
+            showPrompt(error.message)
+        }
+    })
+
+    function handleAddExercise(
+        exerciseId: number,
+        sessionId: number,
+        rirTarget?: number,
+        weekNum?: number,
+        dayNum?: number,
+        mesoId?: number
+    ) {
+        addExerciseMutation.mutate({
+            exerciseId,
+            sessionId,
+            rirTarget,
+            mesocycleId: mesoId ?? Number(mesocycleId),
+            weeknumber: weekNum ?? Number(weeknumber),
+            daynumber: dayNum ?? Number(daynumber)
         })
-        await fetchAllweekdata(true) //refresh the other weeks without blanking the screen
-        showPrompt(result?.message || "Exercise replaced for the remaining weeks")
     }
 
     
@@ -310,15 +454,7 @@ export default function WorkoutUi() {
             if (response.status === 200) {
                 localStorage.removeItem(storageKey)
                 setSessiondata((prev: any) => ({ ...prev, status: "completed" }))
-                setData((prev: any) => {
-                    if (!prev) return prev
-                    return {
-                        ...prev,
-                        sessions: prev.sessions?.map((s: any) =>
-                            s.id === sessionData.id ? { ...s, status: "completed" } : s
-                        )
-                    }
-                })
+                await queryClient.invalidateQueries({ queryKey: ["allweeksdata"] })
                 showPrompt(message)
             } else if (response.status === 404) {
                 showPrompt(message)
@@ -338,44 +474,31 @@ export default function WorkoutUi() {
     }
 
 
+    
 
-    async function fetchAllweekdata(silent = false) {
-        if (!silent) {
-            setLoading(true)
-            setLoadingError(null)
-        }
-        try {
-            //@ts-ignore
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/mesocycles/all/${mesocycleId}`)
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`)
-            }
-            const result = await response.json()
-            if (!Array.isArray(result?.sessions)) {
-                throw new Error("Mesocycle data did not include any sessions")
-            }
-            setData(result)
-        } catch (error) {
-            if (!silent) {
-                setLoadingError(error instanceof Error ? error.message : "Failed to load this mesocycle")
-            }
-        } finally {
-            if (!silent) {
-                setLoading(false)
-            }
-        }
-    }
 
-    useEffect(() => {
-        
-        fetchAllweekdata() //when the components renders for call this function which fetches all the weeks datas
-    }, [mesocycleId])
+   
+   
 
     
 
     const currentSession = data?.sessions?.find( //get the current session
         (element: any) => element.weeknumber == weeknumber && element.daynumber == daynumber
     )
+
+    const sessionRirTarget = (() => {
+        for (const se of (sessionData?.sessionexercise ?? [])) {
+            for (const s of (se.set ?? [])) {
+                if (s.rirTarget != null) return Number(s.rirTarget)
+            }
+        }
+        for (const se of (currentSession?.sessionexercise ?? [])) {
+            for (const s of (se.set ?? [])) {
+                if (s.rirTarget != null) return Number(s.rirTarget)
+            }
+        }
+        return undefined
+    })()
 
     const storageKey = `workout-${mesocycleId}-${weeknumber}-${daynumber}`
 
@@ -403,11 +526,11 @@ export default function WorkoutUi() {
 
 
 
-    if (loadingError) {
-        return <ErrorState message={loadingError} onRetry={() => fetchAllweekdata()} />
+    if (isError) {
+        return <ErrorState message={error.message} onRetry={() => refetch()} />
     }
 
-    if (loading || (sessionData == undefined)) {
+    if ( isPending || (sessionData == undefined)) {
         return <p className="min-h-screen bg-[#000000] text-[#8a8a8a] p-6 sm:p-10">Loading..</p>
     }
     
@@ -431,6 +554,10 @@ export default function WorkoutUi() {
                     label={currentSession.label}
                     openCloseCalender={setOpen}
                     isCalenderopen={isCalenderopen}
+                    openSummary={() => {
+                        setOpen(false)
+                        setSummaryOpen(true)
+                    }}
                 />
                 {Number(weeknumber) > 1 && (
                     <div className="mt-5 rounded-md border border-[#1f1f1f] border-l-2 border-l-red-600/70 bg-[#0a0a0a] px-4 py-3">
@@ -442,8 +569,17 @@ export default function WorkoutUi() {
                 )}
                 <div className="mt-6 flex flex-col gap-3">
                     {sessionData.sessionexercise.map((exerciseobject: any, index: number) => (
-                        <Setcard key={exerciseobject.id} exerciseData={exerciseobject} updateSet={updateSet} recalculateReps={recalculateReps} competeSet={competeSet} deleteSet={deleteSet} addSet={addSet} replaceExercise={replaceExercise} />
+                        <Setcard key={exerciseobject.id} exerciseData={exerciseobject} updateSet={updateSet} recalculateReps={recalculateReps} competeSet={competeSet} deleteSet={deleteSet} addSet={addSet} replaceExercise={replaceExercise} deleteWholeExercise={promptDeleteExercise} isSessionCompleted={isSessionCompleted} />
                     ))}
+                    <button
+                        type="button"
+                        onClick={() => setOpenorClose(true)}
+                        disabled={isSessionCompleted}
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-dashed border-[#262626] bg-[#0a0a0a]/50 text-sm font-medium text-[#8a8a8a] hover:text-[#ededed] hover:border-[#404040] hover:bg-[#111111] transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#8a8a8a] disabled:hover:border-[#262626] disabled:hover:bg-[#0a0a0a]/50"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Exercise</span>
+                    </button>
                 </div>
 
                 <div className="mt-8">
@@ -496,10 +632,17 @@ export default function WorkoutUi() {
                 />
             )}
 
+            {isSummaryOpen && (
+                <SummaryModal
+                    mesocycleId={String(mesocycleId)}
+                    onClose={() => setSummaryOpen(false)}
+                />
+            )}
+
             
 
             {replacePrompt && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setReplacePrompt(null)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => !mutation.isPending && setReplacePrompt(null)}>
                     <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
                     <div
                         role="dialog"
@@ -515,22 +658,44 @@ export default function WorkoutUi() {
                         <div className="mt-5 flex flex-col gap-2">
                             <button
                                 type="button"
+                                disabled={mutation.isPending}
                                 onClick={replaceTheRemainingWeek}
-                                className="w-full rounded-lg border border-[#222222] py-2.5 text-sm font-semibold text-[#ededed] transition-colors hover:border-[#333333] hover:bg-[#141414] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60"
+                                className={`w-full flex items-center justify-center gap-2 rounded-lg border border-[#222222] py-2.5 text-sm font-semibold text-[#ededed] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 ${
+                                    mutation.isPending
+                                        ? "opacity-60 cursor-not-allowed bg-[#141414]"
+                                        : "hover:border-[#333333] hover:bg-[#141414]"
+                                }`}
                             >
-                                Remaining week
+                                {mutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Replacing...</span>
+                                    </>
+                                ) : (
+                                    "Remaining week"
+                                )}
                             </button>
                             <button
                                 type="button"
+                                disabled={mutation.isPending}
                                 onClick={replaceForThisSession}
-                                className="w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed]"
+                                className={`w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] ${
+                                    mutation.isPending
+                                        ? "opacity-60 cursor-not-allowed"
+                                        : "hover:bg-red-500"
+                                }`}
                             >
                                 Just this session
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setReplacePrompt(null)}
-                                className="w-full rounded-lg py-2.5 text-sm font-semibold text-[#8a8a8a] transition-colors hover:text-[#ededed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60"
+                                disabled={mutation.isPending}
+                                onClick={() => !mutation.isPending && setReplacePrompt(null)}
+                                className={`w-full rounded-lg py-2.5 text-sm font-semibold text-[#8a8a8a] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 ${
+                                    mutation.isPending
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "hover:text-[#ededed]"
+                                }`}
                             >
                                 Cancel
                             </button>
@@ -538,6 +703,84 @@ export default function WorkoutUi() {
                     </div>
                 </div>
             )}
+
+            {deletePrompt && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => !deleteMutation.isPending && setDeletePrompt(null)}>
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-scope-title"
+                        className="relative w-full max-w-sm rounded-2xl border border-[#222222] bg-[#0a0a0a] p-5 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 id="delete-scope-title" className="text-base font-semibold text-[#ededed]">Delete exercise?</h2>
+                        <p className="mt-1 text-sm text-[#8a8a8a]">
+                            Delete <span className="text-[#ededed]">{deletePrompt.exerciseName}</span> from the remaining weeks or just this session?
+                        </p>
+                        <div className="mt-5 flex flex-col gap-2">
+                            <button
+                                type="button"
+                                disabled={deleteMutation.isPending}
+                                onClick={deleteTheRemainingWeek}
+                                className={`w-full flex items-center justify-center gap-2 rounded-lg border border-red-900/50 bg-red-950/20 py-2.5 text-sm font-semibold text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 ${
+                                    deleteMutation.isPending
+                                        ? "opacity-60 cursor-not-allowed"
+                                        : "hover:border-red-800 hover:bg-red-950/40"
+                                }`}
+                            >
+                                {deleteMutation.isPending ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    "Remaining weeks"
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deleteMutation.isPending}
+                                onClick={deleteForThisSession}
+                                className={`w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ededed] ${
+                                    deleteMutation.isPending
+                                        ? "opacity-60 cursor-not-allowed"
+                                        : "hover:bg-red-500"
+                                }`}
+                            >
+                                Just this session
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deleteMutation.isPending}
+                                onClick={() => !deleteMutation.isPending && setDeletePrompt(null)}
+                                className={`w-full rounded-lg py-2.5 text-sm font-semibold text-[#8a8a8a] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60 ${
+                                    deleteMutation.isPending
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : "hover:text-[#ededed]"
+                                }`}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {
+                isAddexerciseOpen && (
+                    <AddExercise
+                        setOpenorClose={setOpenorClose}
+                        onClose={() => setOpenorClose(false)}
+                        sessionId={currentSession?.id || sessionData?.id}
+                        rirTarget={sessionRirTarget}
+                        mesocycleId={Number(mesocycleId)}
+                        weeknumber={Number(weeknumber)}
+                        daynumber={Number(daynumber)}
+                        onAddExercise={handleAddExercise}
+                        isLoading={addExerciseMutation.isPending}
+                    />
+                )
+            }
 
             <ToastDialog message={promptMessage} />
         </div>
